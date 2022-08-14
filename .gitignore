@@ -1,3 +1,10 @@
+# Directories
+/.vagrant
+/.vscode
+/.idea
+/.intellij
+/build
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -13,3 +20,22 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# Editor swap files
+*.swp
+*.swo
+*.swn
+
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+*.exe
+*.prof
+*.pyc
+
+# Misc
+.DS_Store
+coverage.out
+docker.env
+go_env.properties
