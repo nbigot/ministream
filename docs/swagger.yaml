@@ -1,0 +1,1021 @@
+basePath: /
+definitions:
+  account.AccountSettings:
+    properties:
+      backup:
+        example: 1 day
+        type: string
+      maxAllowedStreams:
+        example: 25
+        type: integer
+      maxConnections:
+        example: 50
+        type: integer
+      storage:
+        example: 5368709120
+        type: integer
+    type: object
+  apierror.APIError:
+    properties:
+      code:
+        description: application-specific error code
+        type: integer
+      details:
+        description: application-level error details that best describes the error,
+          for debugging
+        type: string
+      error:
+        description: application-level error message, for debugging
+        type: string
+      streamUUID:
+        description: stream uuid
+        type: string
+      validationErrors:
+        description: list of errors
+        items:
+          $ref: '#/definitions/apierror.ValidationError'
+        type: array
+    type: object
+  apierror.ValidationError:
+    properties:
+      failedField:
+        type: string
+      tag:
+        type: string
+      value:
+        type: string
+    type: object
+  stream.CloseRecordsIteratorResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      streamIteratorUUID:
+        type: string
+      streamUUID:
+        type: string
+    type: object
+  stream.CreateRecordsIteratorResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+      streamIteratorUUID:
+        type: string
+      streamUUID:
+        type: string
+    type: object
+  stream.GetStreamRecordsResponse:
+    properties:
+      count:
+        type: integer
+      countErrors:
+        type: integer
+      countSkipped:
+        type: integer
+      duration:
+        type: integer
+      records:
+        items: {}
+        type: array
+      remain:
+        type: boolean
+      status:
+        type: string
+      streamIteratorUUID:
+        type: string
+      streamUUID:
+        type: string
+    type: object
+  stream.LoginAccountResponse:
+    properties:
+      jwt:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  stream.LoginUserResponse:
+    properties:
+      jwt:
+        type: string
+      message:
+        type: string
+      status:
+        type: string
+    type: object
+  stream.PutStreamRecordsResponse:
+    properties:
+      count:
+        type: integer
+      duration:
+        type: integer
+      messageIds:
+        items:
+          type: integer
+        type: array
+      status:
+        type: string
+      streamUUID:
+        type: string
+    type: object
+  stream.Stream:
+    properties:
+      cptMessages:
+        example: 12345
+        type: integer
+      creationDate:
+        type: string
+      filepath:
+        type: string
+      lastMsgId:
+        type: integer
+      lastUpdate:
+        type: string
+      properties:
+        $ref: '#/definitions/stream.StreamProperties'
+      sizeInBytes:
+        example: 4567890
+        type: integer
+      uuid:
+        example: 4ce589e2-b483-467b-8b59-758b339801db
+        type: string
+    type: object
+  stream.StreamProperties:
+    additionalProperties: true
+    type: object
+  web.GetAccountHTTPJsonResult:
+    properties:
+      accountSettings:
+        $ref: '#/definitions/account.AccountSettings'
+      id:
+        example: 123489e2-b483-467b-8b59-758b33981234
+        type: string
+      name:
+        example: account name
+        type: string
+    type: object
+  web.JSONResult:
+    properties:
+      code:
+        example: 200
+        type: integer
+      data: {}
+      message:
+        example: success
+        type: string
+    type: object
+  web.JSONResultListStreamsProperties:
+    properties:
+      code:
+        example: 200
+        type: integer
+      result:
+        $ref: '#/definitions/web.JSONResultListStreamsPropertiesResult'
+    type: object
+  web.JSONResultListStreamsPropertiesResult:
+    properties:
+      rows:
+        items:
+          $ref: '#/definitions/web.JSONResultListStreamsPropertiesResultRow'
+        type: array
+      total:
+        example: 5
+        type: integer
+    type: object
+  web.JSONResultListStreamsPropertiesResultRow:
+    properties:
+      cptMessages:
+        example: 12345
+        type: integer
+      creationDate:
+        type: string
+      filepath:
+        type: string
+      lastMsgId:
+        type: integer
+      lastUpdate:
+        type: string
+      properties:
+        $ref: '#/definitions/stream.StreamProperties'
+      sizeInBytes:
+        example: 4567890
+        type: integer
+      uuid:
+        example: 4ce589e2-b483-467b-8b59-758b339801db
+        type: string
+    type: object
+  web.JSONResultSuccess:
+    properties:
+      code:
+        example: 200
+        type: integer
+      message:
+        example: success
+        type: string
+    type: object
+  web.Pbkdf2Payload:
+    properties:
+      digest:
+        example: sha256
+        type: string
+      iterations:
+        maximum: 10000
+        minimum: 1
+        type: integer
+      password:
+        example: thisismysecretpassword
+        type: string
+      salt:
+        example: thisisarandomsalt
+        type: string
+    required:
+    - digest
+    - password
+    - salt
+    type: object
+host: 127.0.0.1:8080
+info:
+  contact: {}
+  description: This documentation describes MiniStream API
+  license:
+    name: MIT
+  termsOfService: http://swagger.io/terms/
+  title: MiniStream API
+  version: "1.0"
+paths:
+  /api/v1//admin/jwt/revoke:
+    post:
+      consumes:
+      - application/json
+      description: Reload server authentication configuration
+      operationId: server-jwt-revoke-all
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Reload server authentication configuration
+      tags:
+      - Admin
+  /api/v1//admin/server/reload/auth:
+    post:
+      consumes:
+      - application/json
+      description: Reload server authentication configuration
+      operationId: server-reload-auth
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Reload server authentication configuration
+      tags:
+      - Admin
+  /api/v1//admin/server/stop:
+    post:
+      consumes:
+      - application/json
+      description: Stop server
+      operationId: server-stop
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Stop server
+      tags:
+      - Admin
+  /api/v1/account:
+    get:
+      consumes:
+      - application/json
+      description: Get account details
+      operationId: account-get
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            allOf:
+            - $ref: '#/definitions/web.JSONResult'
+            - properties:
+                data:
+                  allOf:
+                  - $ref: '#/definitions/web.GetAccountHTTPJsonResult'
+                  - properties:
+                      accountSettings:
+                        $ref: '#/definitions/account.AccountSettings'
+                    type: object
+              type: object
+      summary: Get account
+      tags:
+      - Account
+  /api/v1/account/login:
+    get:
+      consumes:
+      - application/json
+      description: Account login
+      operationId: account-login
+      parameters:
+      - description: API-KEY
+        in: header
+        name: API-KEY
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.LoginAccountResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Account login
+      tags:
+      - Account
+  /api/v1/account/validate:
+    get:
+      consumes:
+      - application/json
+      description: Log in a user
+      operationId: account-validate-api-key
+      parameters:
+      - description: API-KEY
+        in: header
+        name: API-KEY
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Validate API Key
+      tags:
+      - Account
+  /api/v1/job/:
+    post:
+      consumes:
+      - application/json
+      description: Create a job
+      operationId: job-create
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Create a job
+      tags:
+      - Job
+  /api/v1/job/{jobuuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a job
+      operationId: job-delete
+      parameters:
+      - description: Some job UUID
+        format: uuid.UUID
+        in: path
+        name: jobuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Delete a job
+      tags:
+      - Job
+    get:
+      consumes:
+      - application/json
+      description: Get the job description and status
+      operationId: job-get
+      parameters:
+      - description: Some job UUID
+        format: uuid.UUID
+        in: path
+        name: jobuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            items:
+              type: string
+            type: array
+      summary: Get a job
+      tags:
+      - Job
+  /api/v1/jobs:
+    get:
+      consumes:
+      - application/json
+      description: Get the list of all jobs UUIDs
+      operationId: job-list
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            items:
+              type: string
+            type: array
+      summary: List jobs
+      tags:
+      - Job
+  /api/v1/stream:
+    post:
+      consumes:
+      - application/json
+      description: Create a new stream
+      operationId: stream-create
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              type: string
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Create a stream
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a stream
+      operationId: stream-delete
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Delete a stream
+      tags:
+      - Stream
+    get:
+      consumes:
+      - application/json
+      description: Get the description for the given stream UUID
+      operationId: stream-get-description
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.Stream'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Get stream description
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/iterator:
+    delete:
+      consumes:
+      - application/json
+      description: Close an existing stream records iterator by it's UUID
+      operationId: stream-close-records-iterator
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.CloseRecordsIteratorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Close a stream records iterator
+      tags:
+      - Stream
+    post:
+      consumes:
+      - application/json
+      description: Create a record iterator to get records from a given position for
+        the given stream UUID
+      operationId: stream-create-records-iterator
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/stream.CreateRecordsIteratorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Create stream records iterator
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/records:
+    get:
+      consumes:
+      - application/json
+      description: Get records for the given stream UUID
+      operationId: stream-get-records
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      - description: Iterator UUID
+        format: uuid.UUID
+        in: path
+        name: iteratoruuid
+        required: true
+        type: string
+      - description: int max records
+        in: query
+        name: maxRecords
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.GetStreamRecordsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Get stream records
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/stats:
+    get:
+      consumes:
+      - application/json
+      description: Get statistics for the given stream UUID and stream record iterator
+        UUID
+      operationId: stream-get-records-iterator-stats
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      - description: Iterator UUID
+        format: uuid.UUID
+        in: path
+        name: iteratoruuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Get statistics about a stream records iterator
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/properties:
+    get:
+      consumes:
+      - application/json
+      description: Get the properties for the given stream UUID
+      operationId: stream-get-properties
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.StreamProperties'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Get stream properties
+      tags:
+      - Stream
+    patch:
+      consumes:
+      - application/json
+      description: update properties for the given stream
+      operationId: stream-update-properties
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.StreamProperties'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Update stream properties
+      tags:
+      - Stream
+    post:
+      consumes:
+      - application/json
+      description: Set and replace properties for the given stream
+      operationId: stream-set-properties
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.StreamProperties'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Set stream properties
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/raw:
+    get:
+      consumes:
+      - application/json
+      description: Get the raw file for the given stream UUID
+      operationId: stream-get-raw-file
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Get stream raw file
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/record:
+    put:
+      consumes:
+      - application/json
+      description: Put a single record into a stream
+      operationId: stream-put-record
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.PutStreamRecordsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Put one record into a stream
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/records:
+    put:
+      consumes:
+      - application/json
+      description: Put one or multiple records into a stream
+      operationId: stream-put-records
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.PutStreamRecordsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Put one or multiple records into a stream
+      tags:
+      - Stream
+  /api/v1/stream/index/{streamuuid}/rebuild:
+    post:
+      consumes:
+      - application/json
+      description: Build or rebuild the stream index
+      operationId: stream-rebuild-index
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Rebuild the stream index
+      tags:
+      - Stream
+  /api/v1/streams:
+    get:
+      consumes:
+      - application/json
+      description: Get the list of all streams UUIDs
+      operationId: stream-list
+      parameters:
+      - description: string jq filter
+        in: query
+        name: jq
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            items:
+              type: string
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: List streams
+      tags:
+      - Stream
+  /api/v1/streams/properties:
+    get:
+      consumes:
+      - application/json
+      description: Get the streams UUIDs and their properties
+      operationId: stream-list-and-properties
+      parameters:
+      - description: string jq filter
+        in: query
+        name: jq
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultListStreamsProperties'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: List streams properties
+      tags:
+      - Stream
+  /api/v1/user/login:
+    get:
+      consumes:
+      - application/json
+      description: Logs user into the system
+      operationId: user-login
+      parameters:
+      - description: ACCESS-KEY-ID
+        in: header
+        name: ACCESS-KEY-ID
+        required: true
+        type: string
+      - description: SECRET-ACCESS-KEY
+        in: header
+        name: SECRET-ACCESS-KEY
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.LoginUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Logs user into the system
+      tags:
+      - User
+  /api/v1/users:
+    get:
+      consumes:
+      - application/json
+      description: Get the list of users
+      operationId: user-list
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+      summary: List users
+      tags:
+      - User
+  /api/v1/utils/pbkdf2:
+    post:
+      consumes:
+      - application/json
+      description: Generate hash from password
+      operationId: utils-pbkdf2
+      parameters:
+      - description: Pbkdf2Payload
+        format: Pbkdf2Payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/web.Pbkdf2Payload'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Generate hash from password
+      tags:
+      - Utils
+  /api/v1/utils/ping:
+    get:
+      description: Ping server
+      operationId: utils-ping
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: ok
+          schema:
+            type: string
+      summary: Ping server
+      tags:
+      - Utils
+swagger: "2.0"
