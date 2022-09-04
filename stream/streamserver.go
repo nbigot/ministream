@@ -32,30 +32,6 @@ func init() {
 	//saverHander.Coucou = 2
 }
 
-func GoServer() {
-	LoadServerAuthConfig()
-
-	Streams.SetLogger(log.Logger)
-	err := Streams.LoadStreams(config.Configuration.StreamsFile)
-	if err != nil {
-		log.Logger.Fatal("Error while loading streams",
-			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
-			zap.String("filename", config.Configuration.StreamsFile),
-			zap.Error(err),
-		)
-	}
-
-	//context.Background()
-	//context.TODO()
-	//ctx, cancel := context.WithCancel(context.Background())
-
-	log.Logger.Info(
-		"Stream server started",
-		zap.String("topic", "server"),
-		zap.String("method", "GoServer"),
-	)
-}
 
 func LoadServerAuthConfig() {
 	log.Logger.Info(

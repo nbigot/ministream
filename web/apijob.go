@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"ministream/constants"
 	"ministream/stream"
-	. "ministream/web/apierror"
+	"ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -76,11 +76,11 @@ func DeleteJob(c *fiber.Ctx) error {
 	return c.JSON(jobUuid)
 }
 
-func GetJobUUIDFromParameter(c *fiber.Ctx) (stream.JobUUID, *APIError) {
+func GetJobUUIDFromParameter(c *fiber.Ctx) (stream.JobUUID, *apierror.APIError) {
 	jobUuid, err := uuid.Parse(c.Params("jobuuid"))
 	if err != nil {
 		// param is not a valid UUID
-		return jobUuid, &APIError{
+		return jobUuid, &apierror.APIError{
 			Message:  fmt.Sprintf("'%s' is not a valid stream uuid", c.Params("jobuuid")),
 			Code:     constants.ErrorInvalidJobUuid,
 			HttpCode: fiber.StatusBadRequest,
@@ -92,7 +92,7 @@ func GetJobUUIDFromParameter(c *fiber.Ctx) (stream.JobUUID, *APIError) {
 	return jobUuid, nil
 }
 
-func GetJobFromParameter(c *fiber.Ctx) (stream.JobUUID, *stream.Job, *APIError) {
+func GetJobFromParameter(c *fiber.Ctx) (stream.JobUUID, *stream.Job, *apierror.APIError) {
 	jobUuid, err := GetJobUUIDFromParameter(c)
 	if err != nil {
 		return jobUuid, nil, err
@@ -101,7 +101,7 @@ func GetJobFromParameter(c *fiber.Ctx) (stream.JobUUID, *stream.Job, *APIError) 
 	jobPtr := stream.GetJob(jobUuid)
 	if jobPtr == nil {
 		// job was found
-		return jobUuid, nil, &APIError{
+		return jobUuid, nil, &apierror.APIError{
 			Message:    fmt.Sprintf("job '%s' was not found", c.Params("jobuuid")),
 			Code:       constants.ErrorJobUuidNotFound,
 			HttpCode:   fiber.StatusNoContent,

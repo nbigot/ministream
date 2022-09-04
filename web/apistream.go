@@ -8,8 +8,10 @@ import (
 	"ministream/constants"
 	"ministream/log"
 	"ministream/rbac"
+	"ministream/service"
 	"ministream/stream"
-	. "ministream/web/apierror"
+	"ministream/types"
+	"ministream/web/apierror"
 	"strconv"
 	"strings"
 	"time"
@@ -29,21 +31,21 @@ import (
 // @Produce json
 // @Tags Stream
 // @Param jq query string false "string jq filter" example(".name == \"test 8\"")
-// @Success 200 {array} stream.StreamUUID "successful operation"
+// @Success 200 {array} types.StreamUUID "successful operation"
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/streams [get]
 func ListStreams(c *fiber.Ctx) error {
-	var streamsUUIDs *[]stream.StreamUUID = nil
+	var streamsUUIDs types.StreamUUIDList = nil
 	var jq *gojq.Query
 	var err error
 	if jq, err = getJQFromString(c.Query("jq")); err != nil {
-		vErr := ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
+		httpError := apierror.APIError{
 			Message:          "invalid jq filter",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidJQFilter,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 		return httpError.HTTPResponse(c)
@@ -55,12 +57,12 @@ func ListStreams(c *fiber.Ctx) error {
 		abac = abacCtx.(*rbac.ABAC)
 	}
 	if jq == nil && abac == nil {
-		streamsUUIDs = stream.Streams.GetStreamsUUIDs()
+		streamsUUIDs = service.StreamService.GetStreamsUUIDs()
 	} else {
 		if abac == nil {
-			streamsUUIDs = stream.Streams.GetStreamsUUIDsFiltered(jq)
+			streamsUUIDs = service.StreamService.GetStreamsUUIDsFiltered(jq)
 		} else {
-			streamsUUIDs = stream.Streams.GetStreamsUUIDsFiltered(jq, abac.JqFilter)
+			streamsUUIDs = service.StreamService.GetStreamsUUIDsFiltered(jq, abac.JqFilter)
 		}
 	}
 
@@ -80,13 +82,13 @@ func ListStreams(c *fiber.Ctx) error {
 // @Router /api/v1/streams/properties [get]
 func ListStreamsProperties(c *fiber.Ctx) error {
 	if jq, err := getJQFromString(c.Query("jq")); err != nil {
-		vErr := ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
+		httpError := apierror.APIError{
 			Message:          "invalid jq filter",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidJQFilter,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 		return httpError.HTTPResponse(c)
@@ -98,9 +100,9 @@ func ListStreamsProperties(c *fiber.Ctx) error {
 			abac = abacCtx.(*rbac.ABAC)
 		}
 		if abac == nil {
-			rows = stream.Streams.GetStreamsFiltered(jq)
+			rows = service.StreamService.GetStreamsFiltered(jq)
 		} else {
-			rows = stream.Streams.GetStreamsFiltered(jq, abac.JqFilter)
+			rows = service.StreamService.GetStreamsFiltered(jq, abac.JqFilter)
 		}
 		res := convertStreamListToJsonResult(rows)
 		return c.JSON(res)
@@ -126,9 +128,9 @@ func CreateStream(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	s, err := stream.Streams.CreateStream(convertToProperties(payload.Properties))
+	s, err := service.StreamService.CreateStream(convertToProperties(payload.Properties))
 	if err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "cannot create stream",
 			Details:  err.Error(),
 			Code:     constants.ErrorCantCreateStream,
@@ -146,7 +148,7 @@ func CreateStream(c *fiber.Ctx) error {
 		zap.String("accountId", account.Id.String()),
 		zap.String("ipAddress", c.IP()),
 		zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
-		zap.String("streamUUID", s.UUID.String()),
+		zap.String("streamUUID", s.GetUUID().String()),
 	)
 
 	return c.Status(fiber.StatusCreated).JSON(s)
@@ -178,7 +180,7 @@ func SetStreamProperties(c *fiber.Ctx) error {
 	}
 
 	streamPtr.SetProperties(convertToProperties(payload.Properties))
-	return c.JSON(streamPtr.Properties)
+	return c.JSON(streamPtr.GetProperties())
 }
 
 // UpdateStreamProperties godoc
@@ -207,7 +209,7 @@ func UpdateStreamProperties(c *fiber.Ctx) error {
 	}
 
 	streamPtr.UpdateProperties(convertToProperties(payload.Properties))
-	return c.JSON(streamPtr.Properties)
+	return c.JSON(streamPtr.GetProperties())
 }
 
 // GetStreamProperties godoc
@@ -227,7 +229,7 @@ func GetStreamProperties(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	return c.JSON(streamPtr.Properties)
+	return c.JSON(streamPtr.GetProperties())
 }
 
 // GetStreamRawFile godoc
@@ -241,15 +243,15 @@ func GetStreamProperties(c *fiber.Ctx) error {
 // @Success 200 {object} stream.StreamUUID "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/raw [get]
-func GetStreamRawFile(c *fiber.Ctx) error {
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
-	if apiErr != nil {
-		return apiErr.HTTPResponse(c)
-	}
+// func GetStreamRawFile(c *fiber.Ctx) error {
+// 	_, streamPtr, apiErr := GetStreamFromParameter(c)
+// 	if apiErr != nil {
+// 		return apiErr.HTTPResponse(c)
+// 	}
 
-	flagCompress := c.AcceptsEncodings("gzip") == "gzip"
-	return c.SendFile(streamPtr.GetDataFilePath(), flagCompress)
-}
+// 	flagCompress := c.AcceptsEncodings("gzip") == "gzip"
+// 	return c.SendFile(streamPtr.GetDataFilePath(), flagCompress)
+// }
 
 // DeleteStream godoc
 // @Summary Delete a stream
@@ -268,9 +270,9 @@ func DeleteStream(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	err := stream.Streams.DeleteStream(streamUUID)
+	err := service.StreamService.DeleteStream(streamUUID)
 	if err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "cannot delete stream",
 			Details:  err.Error(),
 			Code:     constants.ErrorCantDeleteStream,
@@ -327,58 +329,42 @@ func GetStreamDescription(c *fiber.Ctx) error {
 // @Router /api/v1/stream/{streamuuid}/iterator [post]
 func CreateRecordsIterator(c *fiber.Ctx) error {
 	var err error
+	var apiError *apierror.APIError
+	var streamPtr *stream.Stream
+	var streamUUID types.StreamUUID
+	var iteratorUUID types.StreamIteratorUUID
 
 	if err = stream.ValidateStreamIteratorRequest(c.Context(), c.Body()); err != nil {
-		httpError := APIError{
+		apiError = &apierror.APIError{
 			Message:  "invalid request",
 			Details:  err.Error(),
 			Code:     constants.ErrorInvalidCreateRecordsIteratorRequest,
 			HttpCode: fiber.StatusBadRequest,
 			Err:      err,
 		}
-		return httpError.HTTPResponse(c)
+		return apiError.HTTPResponse(c)
 	}
 
-	req := stream.StreamIteratorRequest{}
-	if httpError := GetPayload(c, &req); httpError != nil {
-		return httpError.HTTPResponse(c)
+	req := types.StreamIteratorRequest{}
+	if apiError = GetPayload(c, &req); apiError != nil {
+		return apiError.HTTPResponse(c)
 	}
 
-	streamUUID, streamPtr, httpError2 := GetStreamFromParameter(c)
-	if httpError2 != nil {
-		return httpError2.HTTPResponse(c)
+	streamUUID, streamPtr, apiError = GetStreamFromParameter(c)
+	if apiError != nil {
+		return apiError.HTTPResponse(c)
 	}
 
-	var iter *stream.StreamIterator
-	if iter, err = stream.CreateRecordsIterator(&req); err != nil {
-		httpError := APIError{
-			Message:    "cannot create stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorInvalidCreateRecordsIteratorRequest,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
-		return httpError.HTTPResponse(c)
-	}
-
-	if err = streamPtr.AddIterator(iter); err != nil {
-		httpError := APIError{
-			Message:    "cannot create stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorInvalidCreateRecordsIteratorRequest,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
-		return httpError.HTTPResponse(c)
+	iteratorUUID, apiError = service.StreamService.CreateRecordsIterator(streamPtr, &req)
+	if apiError != nil {
+		return apiError.HTTPResponse(c)
 	}
 
 	response := stream.CreateRecordsIteratorResponse{
 		Status:             "success",
 		Message:            "Stream iterator created",
 		StreamUUID:         streamUUID,
-		StreamIteratorUUID: iter.UUID,
+		StreamIteratorUUID: iteratorUUID,
 	}
 	return c.JSON(response)
 }
@@ -404,13 +390,13 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 
 	streamIteratorUuid, err := uuid.Parse(c.Params("streamiteratoruuid"))
 	if err != nil {
-		vErr := ValidationError{FailedField: "streamiteratoruuid", Tag: "parameter", Value: c.Params("streamiteratoruuid")}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: "streamiteratoruuid", Tag: "parameter", Value: c.Params("streamiteratoruuid")}
+		httpError := apierror.APIError{
 			Message:          "invalid stream iterator uuid",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidStreamUuid,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 		return httpError.HTTPResponse(c)
@@ -418,7 +404,7 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 
 	var it *stream.StreamIterator
 	if it, err = streamPtr.GetIterator(streamIteratorUuid); err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "iterator not found",
 			Details:  err.Error(),
 			Code:     constants.ErrorStreamIteratorNotFound,
@@ -433,7 +419,7 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 		StreamUUID:         streamUUID,
 		StreamIteratorUUID: streamIteratorUuid,
 		LastMessageIdRead:  it.LastMessageIdRead,
-		FileOffset:         it.FileOffset,
+		//FileOffset:         it.FileOffset,
 	}
 	return c.JSON(response)
 
@@ -479,26 +465,26 @@ func CloseRecordsIterator(c *fiber.Ctx) error {
 	paramNameIteratoruuid := "iteratoruuid"
 	streamIteratorUuid, err2 := uuid.Parse(c.Params(paramNameIteratoruuid))
 	if err2 != nil {
-		vErr := ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
+		httpError := apierror.APIError{
 			Message:          "invalid stream iterator uuid",
 			Details:          err2.Error(),
 			Code:             constants.ErrorInvalidStreamUuid,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err2,
 		}
 		return httpError.HTTPResponse(c)
 	}
 
 	if err3 := streamPtr.CloseIterator(streamIteratorUuid); err3 != nil {
-		vErr := ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
+		httpError := apierror.APIError{
 			Message:          "cannot close stream iterator uuid",
 			Details:          err3.Error(),
 			Code:             constants.ErrorCantCloseStreamIterator,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err3,
 		}
 		return httpError.HTTPResponse(c)
@@ -535,13 +521,13 @@ func GetRecords(c *fiber.Ctx) error {
 
 	iteratorUuid, err := uuid.Parse(c.Params("iteratoruuid"))
 	if err != nil {
-		vErr := ValidationError{FailedField: "iteratoruuid", Tag: "parameter", Value: c.Params("iteratoruuid")}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: "iteratoruuid", Tag: "parameter", Value: c.Params("iteratoruuid")}
+		httpError := apierror.APIError{
 			Message:          "invalid iterator uuid",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidIteratorUuid,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 		return httpError.HTTPResponse(c)
@@ -552,13 +538,13 @@ func GetRecords(c *fiber.Ctx) error {
 	if strMaxRecords != "" {
 		maxRecords, err = strconv.Atoi(strMaxRecords)
 		if err != nil {
-			vErr := ValidationError{FailedField: "maxRecords", Tag: "parameter", Value: strMaxRecords}
-			httpError := APIError{
+			vErr := apierror.ValidationError{FailedField: "maxRecords", Tag: "parameter", Value: strMaxRecords}
+			httpError := apierror.APIError{
 				Message:          "invalid integer value",
 				Details:          err.Error(),
 				Code:             constants.ErrorInvalidParameterValue,
 				HttpCode:         fiber.StatusBadRequest,
-				ValidationErrors: []*ValidationError{&vErr},
+				ValidationErrors: []*apierror.ValidationError{&vErr},
 				Err:              err,
 			}
 			return httpError.HTTPResponse(c)
@@ -568,9 +554,9 @@ func GetRecords(c *fiber.Ctx) error {
 		}
 	}
 
-	response, err2 := streamPtr.GetMessages(c.Context(), iteratorUuid, maxRecords)
+	response, err2 := streamPtr.GetRecords(c.Context(), iteratorUuid, maxRecords)
 	if err2 != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "cannot get records",
 			Details:  err2.Error(),
 			Code:     constants.ErrorCantGetMessagesFromStream,
@@ -600,7 +586,7 @@ func PutRecord(c *fiber.Ctx) error {
 	payload := map[string]interface{}{}
 
 	if err := c.BodyParser(&payload); err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err.Error(),
 			Code:     constants.ErrorCantCreateStream,
@@ -617,7 +603,7 @@ func PutRecord(c *fiber.Ctx) error {
 
 	singleMessageId, err2 := streamPtr.PutMessage(c.Context(), payload)
 	if err2 != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err2.Error(),
 			Code:     constants.ErrorCantPutMessageIntoStream,
@@ -629,10 +615,10 @@ func PutRecord(c *fiber.Ctx) error {
 
 	response := stream.PutStreamRecordsResponse{
 		Status:     "success",
-		StreamUUID: streamPtr.UUID,
+		StreamUUID: streamPtr.GetUUID(),
 		Duration:   time.Since(startTime).Milliseconds(),
 		Count:      1,
-		MessageIds: []stream.MessageId{singleMessageId},
+		MessageIds: []types.MessageId{singleMessageId},
 	}
 	return c.Status(fiber.StatusAccepted).JSON(response)
 }
@@ -680,12 +666,12 @@ func PutRecords(c *fiber.Ctx) error {
 
 		jsonBuffer = append(jsonBuffer, []byte("]")...)
 		if err = c.App().Config().JSONDecoder(jsonBuffer, &payload); err != nil {
-			httpError := APIError{
+			httpError := apierror.APIError{
 				Message:    "invalid jsonlines body format",
 				Details:    err.Error(),
 				Code:       constants.ErrorCantDeserializeJsonRecords,
 				HttpCode:   fiber.StatusBadRequest,
-				StreamUUID: streamPtr.UUID,
+				StreamUUID: streamPtr.GetUUID(),
 				Err:        err,
 			}
 			return httpError.HTTPResponse(c)
@@ -693,12 +679,12 @@ func PutRecords(c *fiber.Ctx) error {
 	} else {
 		// standard json array (with [])
 		if err = c.BodyParser(&payload); err != nil {
-			httpError := APIError{
+			httpError := apierror.APIError{
 				Message:    "invalid json body format",
 				Details:    err.Error(),
 				Code:       constants.ErrorCantDeserializeJsonRecords,
 				HttpCode:   fiber.StatusBadRequest,
-				StreamUUID: streamPtr.UUID,
+				StreamUUID: streamPtr.GetUUID(),
 				Err:        err,
 			}
 			return httpError.HTTPResponse(c)
@@ -707,7 +693,7 @@ func PutRecords(c *fiber.Ctx) error {
 
 	messageIds, err2 := streamPtr.PutMessages(c.Context(), payload)
 	if err2 != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err2.Error(),
 			Code:     constants.ErrorCantPutMessagesIntoStream,
@@ -719,7 +705,7 @@ func PutRecords(c *fiber.Ctx) error {
 
 	response := stream.PutStreamRecordsResponse{
 		Status:     "success",
-		StreamUUID: streamPtr.UUID,
+		StreamUUID: streamPtr.GetUUID(),
 		Duration:   time.Since(startTime).Milliseconds(),
 		Count:      int64(len(payload)),
 		MessageIds: messageIds,
@@ -727,16 +713,16 @@ func PutRecords(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(response)
 }
 
-func GetStreamUUIDFromParameter(c *fiber.Ctx) (stream.StreamUUID, *APIError) {
+func GetStreamUUIDFromParameter(c *fiber.Ctx) (types.StreamUUID, *apierror.APIError) {
 	streamUuid, err := uuid.Parse(c.Params("streamuuid"))
 	if err != nil {
 		// missing or invalid parameter
-		vErr := ValidationError{FailedField: "streamuuid", Tag: "parameter", Value: c.Params("streamuuid")}
-		return streamUuid, &APIError{
+		vErr := apierror.ValidationError{FailedField: "streamuuid", Tag: "parameter", Value: c.Params("streamuuid")}
+		return streamUuid, &apierror.APIError{
 			Message:          "invalid stream uuid",
 			Code:             constants.ErrorInvalidStreamUuid,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 	}
@@ -744,22 +730,22 @@ func GetStreamUUIDFromParameter(c *fiber.Ctx) (stream.StreamUUID, *APIError) {
 	return streamUuid, nil
 }
 
-func GetStreamFromParameter(c *fiber.Ctx) (stream.StreamUUID, *stream.Stream, *APIError) {
+func GetStreamFromParameter(c *fiber.Ctx) (types.StreamUUID, *stream.Stream, *apierror.APIError) {
 	streamUuid, err := GetStreamUUIDFromParameter(c)
 	if err != nil {
 		return streamUuid, nil, err
 	}
 
-	streamPtr := stream.Streams.GetStream(streamUuid)
+	streamPtr := service.StreamService.GetStream(streamUuid)
 	if streamPtr == nil {
 		// stream uuid not found among existing streams
-		vErr := ValidationError{FailedField: "streamuuid", Tag: "parameter", Value: streamUuid.String()}
-		return streamUuid, nil, &APIError{
+		vErr := apierror.ValidationError{FailedField: "streamuuid", Tag: "parameter", Value: streamUuid.String()}
+		return streamUuid, nil, &apierror.APIError{
 			Message:          "stream not found",
 			Code:             constants.ErrorStreamUuidNotFound,
 			HttpCode:         fiber.StatusBadRequest,
 			StreamUUID:       streamUuid,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 		}
 	}
 
@@ -778,19 +764,21 @@ func GetStreamFromParameter(c *fiber.Ctx) (stream.StreamUUID, *stream.Stream, *A
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/index/{streamuuid}/rebuild [post]
 func RebuildIndex(c *fiber.Ctx) error {
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+	startTime := time.Now()
+
+	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	indexStats, err := streamPtr.RebuildIndex()
+	indexStats, err := service.StreamService.BuildIndex(types.StreamUUID(streamUUID))
 	if err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:    "cannot rebuild stream index",
 			Details:    err.Error(),
 			Code:       constants.ErrorCantRebuildStreamIndex,
 			HttpCode:   fiber.StatusInternalServerError,
-			StreamUUID: streamPtr.UUID,
+			StreamUUID: streamPtr.GetUUID(),
 			Err:        err,
 		}
 		return httpError.HTTPResponse(c)
@@ -804,19 +792,21 @@ func RebuildIndex(c *fiber.Ctx) error {
 		zap.String("accountId", account.Id.String()),
 		zap.String("ipAddress", c.IP()),
 		zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
-		zap.String("streamUUID", streamPtr.UUID.String()),
+		zap.String("streamUUID", streamUUID.String()),
 	)
 
-	return c.JSON(
-		fiber.Map{
-			"status": "success", "message": "Stream index rebuilt",
-			"StreamUUID": streamPtr.UUID, "IndexStats": *indexStats,
-		},
-	)
+	response := stream.RebuildStreamIndexResponse{
+		Status:     "success",
+		Message:    "stream index rebuilt",
+		StreamUUID: streamUUID,
+		Duration:   time.Since(startTime).Milliseconds(),
+		IndexStats: indexStats,
+	}
+	return c.JSON(response)
 }
 
-func convertToProperties(propertiesMap map[string]string) *stream.StreamProperties {
-	properties := stream.StreamProperties{}
+func convertToProperties(propertiesMap map[string]string) *types.StreamProperties {
+	properties := types.StreamProperties{}
 	for k, v := range propertiesMap {
 		properties[k] = v
 	}
@@ -836,20 +826,21 @@ func getJQFromString(jq string) (*gojq.Query, error) {
 	}
 }
 
-func convertStreamListToJsonResult(rows *[]*stream.Stream) *JSONResultListStreamsProperties {
-	r := make([]JSONResultListStreamsPropertiesResultRow, 0, len(*rows))
-	for _, row := range *rows {
+func convertStreamListToJsonResult(streams *[]*stream.Stream) *JSONResultListStreamsProperties {
+	r := make([]JSONResultListStreamsPropertiesResultRow, 0, len(*streams))
+	for _, s := range *streams {
+		info := s.GetInfo()
 		r = append(
 			r,
 			JSONResultListStreamsPropertiesResultRow{
-				FilePath:     row.FilePath,
-				UUID:         row.UUID,
-				CptMessages:  row.CptMessages,
-				SizeInBytes:  row.SizeInBytes,
-				CreationDate: row.CreationDate,
-				LastUpdate:   row.LastUpdate,
-				Properties:   row.Properties,
-				LastMsgId:    row.LastMsgId,
+				//FilePath:     info.FilePath,
+				UUID:         info.UUID,
+				CptMessages:  info.CptMessages,
+				SizeInBytes:  info.SizeInBytes,
+				CreationDate: info.CreationDate,
+				LastUpdate:   info.LastUpdate,
+				Properties:   info.Properties,
+				LastMsgId:    info.LastMsgId,
 			},
 		)
 	}
@@ -857,7 +848,7 @@ func convertStreamListToJsonResult(rows *[]*stream.Stream) *JSONResultListStream
 	return &JSONResultListStreamsProperties{
 		Code: fiber.StatusOK,
 		Result: &JSONResultListStreamsPropertiesResult{
-			Total: len(*rows),
+			Total: len(*streams),
 			Rows:  &r,
 		},
 	}

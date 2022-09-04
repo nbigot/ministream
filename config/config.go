@@ -18,10 +18,25 @@ type User struct {
 }
 
 type Config struct {
+	Storage struct {
+		Type     string `yaml:"type"`
+		JSONFile struct {
+			DataDirectory string `yaml:"dataDirectory"`
+		}
+		MySql struct {
+			Login    string `yaml:"login"`
+			Password string `yaml:"password"`
+			URL      string `yaml:"url"`
+		}
+		DynamoDB struct {
+			Login    string `yaml:"login"`
+			Password string `yaml:"password"`
+			URL      string `yaml:"url"`
+		}
+	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
 	AccountFile   string     `yaml:"-"`
-	StreamsFile   string     `yaml:"-"`
 	Streams       struct {
 		BulkFlushFrequency        int `yaml:"bulkFlushFrequency"`
 		BulkMaxSize               int `yaml:"bulkMaxSize"`
@@ -137,7 +152,6 @@ func LoadConfig(filename string) {
 	}
 
 	Configuration.AccountFile = Configuration.DataDirectory + "account.json"
-	Configuration.StreamsFile = Configuration.DataDirectory + "streams.json"
 
 	if Configuration.RBAC.Filename == "" {
 		Configuration.RBAC.Filename = Configuration.DataDirectory + "rbac.json"

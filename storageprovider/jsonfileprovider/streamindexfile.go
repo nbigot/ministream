@@ -1,27 +1,31 @@
-package stream
+package jsonfileprovider
 
 import (
 	"bufio"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
+	"ministream/config"
+	. "ministream/types"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type MsgOffset = int64
 
-type StreamIndex struct {
-	s        *Stream
-	logger   *zap.Logger
-	filename string
-	file     *os.File
-	mu       sync.Mutex
+type StreamIndexFile struct {
+	streamUUID uuid.UUID
+	logger     *zap.Logger
+	filename   string
+	file       *os.File
+	mu         sync.Mutex
 }
 
 type StreamIndexStats struct {
@@ -42,7 +46,17 @@ type streamIndexRowMsg struct {
 
 const sizeOfStreamIndexRowMsg int64 = 4 * 8 // 4 fields x 8 bytes per field
 
-func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
+func GetIndexFilePath(streamUUID uuid.UUID) string {
+	return fmt.Sprintf("%sstreams/%s/index.bin", config.Configuration.DataDirectory, streamUUID.String())
+}
+
+func (idx *StreamIndexFile) Close() {
+	if idx.file != nil {
+		idx.file.Close()
+	}
+}
+
+func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, error) {
 	// Build or rebuild index
 
 	idx.mu.Lock()
@@ -52,7 +66,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 		"Build index started",
 		zap.String("topic", "index"),
 		zap.String("method", "BuildIndex"),
-		zap.String("stream.uuid", idx.s.UUID.String()),
+		zap.String("stream.uuid", idx.streamUUID.String()),
 		zap.String("index.filename", idx.filename),
 	)
 	stats := StreamIndexStats{CptMessages: 0, FileSize: 0}
@@ -63,7 +77,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 	}
 
 	var streamDataFile *os.File
-	streamDataFile, err = os.OpenFile(idx.s.GetDataFilePath(), os.O_RDONLY, 0644)
+	streamDataFile, err = os.OpenFile(dataFilePath, os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err
 	}
@@ -71,14 +85,21 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 
 	idx.file, err = os.OpenFile(idx.filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		idx.logger.Error("can't open index file", zap.String("topic", "index"), zap.String("method", "BuildIndex"), zap.String("stream.uuid", idx.s.UUID.String()), zap.Any("filename", idx.filename), zap.Error(err))
+		idx.logger.Error(
+			"can't open index file",
+			zap.String("topic", "index"),
+			zap.String("method", "BuildIndex"),
+			zap.String("stream.uuid", idx.streamUUID.String()),
+			zap.Any("filename", idx.filename),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 	defer idx.file.Close()
 	defer idx.file.Sync()
 
 	var msgOffset MsgOffset = 0
-	var message *DeferedStreamMessage = nil
+	var message *DeferedStreamRecord = nil
 	row := streamIndexRowMsg{}
 
 	reader := bufio.NewReaderSize(streamDataFile, 1024*1024)
@@ -95,7 +116,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 					zap.String("topic", "index"),
 					zap.String("method", "BuildIndex"),
 					zap.String("detail", "can't read stream file"),
-					zap.String("stream.uuid", idx.s.UUID.String()),
+					zap.String("stream.uuid", idx.streamUUID.String()),
 					zap.String("index.filename", idx.filename),
 					zap.Int64("offset", msgOffset),
 					zap.Error(err),
@@ -111,7 +132,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 				zap.String("topic", "index"),
 				zap.String("method", "BuildIndex"),
 				zap.String("detail", "can't decode json message"),
-				zap.String("stream.uuid", idx.s.UUID.String()),
+				zap.String("stream.uuid", idx.streamUUID.String()),
 				zap.String("index.filename", idx.filename),
 				zap.Int64("offset", msgOffset),
 				zap.Error(err),
@@ -130,7 +151,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 				"Error while writing index into file",
 				zap.String("topic", "index"),
 				zap.String("method", "BuildIndex"),
-				zap.String("stream.uuid", idx.s.UUID.String()),
+				zap.String("stream.uuid", idx.streamUUID.String()),
 				zap.String("index.filename", idx.filename),
 				zap.Int64("offset", msgOffset),
 				zap.Error(err),
@@ -166,7 +187,7 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 		"Build index ended",
 		zap.String("topic", "index"),
 		zap.String("method", "BuildIndex"),
-		zap.String("stream.uuid", idx.s.UUID.String()),
+		zap.String("stream.uuid", idx.streamUUID.String()),
 		zap.String("index.filename", idx.filename),
 		zap.Int64("index.byteSize", stats.FileSize),
 		zap.Int64("index.rowsCount", stats.CptMessages),
@@ -178,11 +199,11 @@ func (idx *StreamIndex) BuildIndex() (*StreamIndexStats, error) {
 	return &stats, nil
 }
 
-func (idx *StreamIndex) GetOffsetFirstMessage() (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetFirstMessage() (MsgOffset, error) {
 	return 0, nil
 }
 
-func (idx *StreamIndex) GetOffsetLastMessage() (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetLastMessage() (MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
 		return 0, err
@@ -191,7 +212,7 @@ func (idx *StreamIndex) GetOffsetLastMessage() (MsgOffset, error) {
 	return row.Offset, nil
 }
 
-func (idx *StreamIndex) GetOffsetAfterLastMessage() (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
 		return 0, err
@@ -200,7 +221,7 @@ func (idx *StreamIndex) GetOffsetAfterLastMessage() (MsgOffset, error) {
 	return row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndex) GetOffsetAtMessageId(messageId MessageId) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId MessageId) (MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
 		return 0, err
@@ -209,7 +230,7 @@ func (idx *StreamIndex) GetOffsetAtMessageId(messageId MessageId) (MsgOffset, er
 	return row.Offset, nil
 }
 
-func (idx *StreamIndex) GetOffsetAfterMessageId(messageId MessageId) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId MessageId) (MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
 		return 0, err
@@ -218,7 +239,7 @@ func (idx *StreamIndex) GetOffsetAfterMessageId(messageId MessageId) (MsgOffset,
 	return row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndex) GetOffsetAtTimestamp(timestamp *time.Time) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtTimestamp(timestamp *time.Time) (MsgOffset, error) {
 	row, err := idx.getOffsetAt(nil, timestamp)
 	if err != nil {
 		return 0, err
@@ -227,7 +248,7 @@ func (idx *StreamIndex) GetOffsetAtTimestamp(timestamp *time.Time) (MsgOffset, e
 	return row.Offset, nil
 }
 
-func (idx *StreamIndex) getOffsetMessage(seekOffset int64, seekWhence int) (*streamIndexRowMsg, error) {
+func (idx *StreamIndexFile) getOffsetMessage(seekOffset int64, seekWhence int) (*streamIndexRowMsg, error) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -237,7 +258,7 @@ func (idx *StreamIndex) getOffsetMessage(seekOffset int64, seekWhence int) (*str
 			"Error while GetOffsetLastMessage open index file",
 			zap.String("topic", "index"),
 			zap.String("method", "getOffsetMessage"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -250,7 +271,7 @@ func (idx *StreamIndex) getOffsetMessage(seekOffset int64, seekWhence int) (*str
 			"Error while GetOffsetLastMessage seek",
 			zap.String("topic", "index"),
 			zap.String("method", "getOffsetMessage"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -263,7 +284,7 @@ func (idx *StreamIndex) getOffsetMessage(seekOffset int64, seekWhence int) (*str
 			"Error while GetOffsetLastMessage read bytes",
 			zap.String("topic", "index"),
 			zap.String("method", "getOffsetMessage"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -273,7 +294,7 @@ func (idx *StreamIndex) getOffsetMessage(seekOffset int64, seekWhence int) (*str
 	return &row, nil
 }
 
-func (idx *StreamIndex) getOffsetAt(messageId *MessageId, timestamp *time.Time) (*streamIndexRowMsg, error) {
+func (idx *StreamIndexFile) getOffsetAt(messageId *MessageId, timestamp *time.Time) (*streamIndexRowMsg, error) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -283,7 +304,7 @@ func (idx *StreamIndex) getOffsetAt(messageId *MessageId, timestamp *time.Time) 
 			"Error while getOffsetAt open index file",
 			zap.String("topic", "index"),
 			zap.String("method", "getOffsetAt"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -309,7 +330,7 @@ func (idx *StreamIndex) getOffsetAt(messageId *MessageId, timestamp *time.Time) 
 	}
 }
 
-func (idx *StreamIndex) searchMessageId(messageId MessageId, lastIndexRank int64, row *streamIndexRowMsg) error {
+func (idx *StreamIndexFile) searchMessageId(messageId MessageId, lastIndexRank int64, row *streamIndexRowMsg) error {
 	// use a dichotomy algorithm to find the index rank for the given MessageId
 	// the result will be returned into the row variable
 	// if no result found then return an error "message id not found"
@@ -349,7 +370,7 @@ func (idx *StreamIndex) searchMessageId(messageId MessageId, lastIndexRank int64
 	return errors.New("message id not found")
 }
 
-func (idx *StreamIndex) searchTimestamp(timestampUnixNano int64, lastIndexRank int64, row *streamIndexRowMsg) error {
+func (idx *StreamIndexFile) searchTimestamp(timestampUnixNano int64, lastIndexRank int64, row *streamIndexRowMsg) error {
 	// use a dichotomy algorithm to find the index rank for the given timestamp
 	// the result will be returned into the row variable
 	// if no result found then return an error "message id not found"
@@ -389,14 +410,14 @@ func (idx *StreamIndex) searchTimestamp(timestampUnixNano int64, lastIndexRank i
 	return errors.New("message id not found")
 }
 
-func (idx *StreamIndex) getRowAtIndexPos(indexPos int64, row *streamIndexRowMsg) error {
+func (idx *StreamIndexFile) getRowAtIndexPos(indexPos int64, row *streamIndexRowMsg) error {
 	var err error
 	if _, err = idx.file.Seek(indexPos*sizeOfStreamIndexRowMsg, io.SeekStart); err != nil {
 		idx.logger.Error(
 			"Error while getRowAtIndexPos seek",
 			zap.String("topic", "index"),
 			zap.String("method", "getRowAtIndexPos"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -408,7 +429,7 @@ func (idx *StreamIndex) getRowAtIndexPos(indexPos int64, row *streamIndexRowMsg)
 			"Error while getRowAtIndexPos read bytes",
 			zap.String("topic", "index"),
 			zap.String("method", "getRowAtIndexPos"),
-			zap.String("stream.uuid", idx.s.UUID.String()),
+			zap.String("stream.uuid", idx.streamUUID.String()),
 			zap.String("index.filename", idx.filename),
 			zap.Error(err),
 		)
@@ -418,7 +439,7 @@ func (idx *StreamIndex) getRowAtIndexPos(indexPos int64, row *streamIndexRowMsg)
 	return nil
 }
 
-func (idx *StreamIndex) getIndexRowsCount() (int64, error) {
+func (idx *StreamIndexFile) getIndexRowsCount() (int64, error) {
 	// Compute index rows count
 	var err error
 	var info fs.FileInfo
@@ -429,12 +450,12 @@ func (idx *StreamIndex) getIndexRowsCount() (int64, error) {
 	return info.Size() / sizeOfStreamIndexRowMsg, nil
 }
 
-func (idx *StreamIndex) Log() {
+func (idx *StreamIndexFile) Log() {
 	idx.logger.Info(
 		"StreamIndex",
 		zap.String("topic", "index"),
 		zap.String("method", "Log"),
-		zap.String("stream.uuid", idx.s.UUID.String()),
+		zap.String("stream.uuid", idx.streamUUID.String()),
 		zap.String("index.filepath", idx.filename),
 		//zap.Time("stream.creationDate", s.CreationDate),
 		// zap.Time("stream.lastUpdate", s.LastUpdate),
@@ -444,4 +465,8 @@ func (idx *StreamIndex) Log() {
 		// zap.String("stream.sizeHumanized", humanize.Bytes(uint64(s.SizeInBytes))),
 		// zap.Any("stream.properties", s.Properties),
 	)
+}
+
+func NewStreamIndex(streamUUID uuid.UUID, logger *zap.Logger) *StreamIndexFile {
+	return &StreamIndexFile{streamUUID: streamUUID, logger: logger, filename: GetIndexFilePath(streamUUID), file: nil}
 }

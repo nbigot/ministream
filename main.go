@@ -6,6 +6,7 @@ import (
 	"ministream/auth"
 	"ministream/config"
 	"ministream/log"
+	"ministream/service"
 	"ministream/stream"
 	"ministream/web"
 )
@@ -31,7 +32,8 @@ func main() {
 	if err := auth.AuthMgr.Initialize(&config.Configuration); err != nil {
 		panic(err)
 	}
-	stream.GoServer()
+	stream.LoadServerAuthConfig()
+	service.NewGlobalService()
 	stream.CronJobStreamsSaver.Start()
 	web.GoServer()
 	stream.CronJobStreamsSaver.Stop()

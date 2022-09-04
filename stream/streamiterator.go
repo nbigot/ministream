@@ -3,26 +3,17 @@ package stream
 import (
 	"context"
 	"errors"
-	"io"
-	"os"
+	. "ministream/types"
 	"time"
 
 	"github.com/goccy/go-json"
-	"github.com/google/uuid"
 	"github.com/itchyny/gojq"
 	"github.com/qri-io/jsonschema"
+	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
-type StreamIteratorUUID = uuid.UUID
 type StreamIteratorMap = map[StreamIteratorUUID]*StreamIterator
-
-type StreamIteratorRequest struct {
-	IteratorType string    `json:"iteratorType" validate:"required,oneof=FIRST_MESSAGE LAST_MESSAGE AFTER_LAST_MESSAGE AT_MESSAGE_ID AFTER_MESSAGE_ID AT_TIMESTAMP"`
-	MessageId    MessageId `json:"messageId"`
-	Timestamp    time.Time `json:"timestamp"`
-	JqFilter     string    `json:"jqFilter"`
-	Name         string    `json:"name"`
-}
 
 // statistics of an iterator
 type StreamIteratorStats struct {
@@ -35,87 +26,148 @@ type StreamIteratorStats struct {
 }
 
 type StreamIterator struct {
-	UUID              StreamIteratorUUID
+	streamUUID        StreamUUID
+	itUUID            StreamIteratorUUID
 	request           *StreamIteratorRequest
 	jqFilter          *gojq.Query
-	file              *os.File
-	filename          string
-	FileOffset        int64
-	initialized       bool
 	LastMessageIdRead MessageId
 	Stats             StreamIteratorStats
+	handler           IStreamIteratorHandler
+	logger            *zap.Logger
 	// TODO: add timeout (self delete at timeout)
 }
 
 var rs = jsonschema.Schema{}
 
+func (it *StreamIterator) GetUUID() StreamIteratorUUID {
+	return it.itUUID
+}
+
 func (it *StreamIterator) Open() error {
-	if it.filename == "" {
-		return errors.New("empty stream filename")
-	}
-
-	if it.file != nil {
-		it.file.Close()
-	}
-
-	var err error
-	it.file, err = os.Open(it.filename)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return it.handler.Open()
 }
 
 func (it *StreamIterator) Close() {
 	it.request = nil
 	it.jqFilter = nil
-	if it.file != nil {
-		it.file.Close()
-		it.file = nil
-	}
+	it.handler.Close()
 }
 
-func (it *StreamIterator) Seek(idx *StreamIndex) error {
-	var err error
-	if it.initialized {
-		_, err = it.file.Seek(it.FileOffset, io.SeekStart)
-		return err
-	}
-
-	switch it.request.IteratorType {
-	case "FIRST_MESSAGE":
-		it.FileOffset, err = idx.GetOffsetFirstMessage()
-	case "LAST_MESSAGE":
-		it.FileOffset, err = idx.GetOffsetLastMessage()
-	case "AFTER_LAST_MESSAGE":
-		it.FileOffset, err = idx.GetOffsetAfterLastMessage()
-	case "AT_MESSAGE_ID":
-		it.FileOffset, err = idx.GetOffsetAtMessageId(it.request.MessageId)
-	case "AFTER_MESSAGE_ID":
-		it.FileOffset, err = idx.GetOffsetAfterMessageId(it.request.MessageId)
-	case "AT_TIMESTAMP":
-		it.FileOffset, err = idx.GetOffsetAtTimestamp(&it.request.Timestamp)
-	default:
-		it.FileOffset = 0
-		err = errors.New("invalid iterator type")
-	}
-
-	if err == nil {
-		it.initialized = true
-		_, err = it.file.Seek(it.FileOffset, io.SeekStart)
-	}
-
-	return err
+func (it *StreamIterator) Seek() error {
+	return it.handler.Seek(it.request)
 }
 
 func (it *StreamIterator) SaveSeek() error {
-	var err error
-	it.FileOffset, err = it.file.Seek(0, io.SeekCurrent)
-	return err
+	return it.handler.SaveSeek()
 }
 
-func CreateRecordsIterator(r *StreamIteratorRequest) (*StreamIterator, error) {
+func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*GetStreamRecordsResponse, error) {
+	var err error
+	startTime := time.Now()
+
+	response := GetStreamRecordsResponse{
+		Status:             "",
+		Duration:           0,
+		Count:              0,
+		CountErrors:        0,
+		CountSkipped:       0,
+		Remain:             false,
+		StreamUUID:         it.streamUUID,
+		StreamIteratorUUID: it.itUUID,
+		Records:            make([]interface{}, 0),
+	}
+
+	defer func() {
+		response.Duration = time.Since(startTime).Milliseconds()
+	}()
+
+	if err = it.Seek(); err != nil {
+		response.Status = "error"
+		return &response, err
+	}
+
+	it.Stats.LastTimeRead = time.Now()
+
+	var record interface{}
+	var foundRecord bool
+	var canContinue bool
+
+	for {
+		record, foundRecord, canContinue, err = it.handler.GetNextRecord()
+
+		if !foundRecord {
+			// no record found, this is the end of the stream
+			response.Status = "success"
+			return &response, nil
+		}
+
+		if err != nil {
+			response.CountErrors += 1
+			if canContinue {
+				continue
+			} else {
+				// non recoverable error, cannot simply skip this record
+				response.Status = "error"
+				return nil, err
+			}
+		}
+
+		it.Stats.RecordsRead++
+		//it.Stats.BytesRead += int64(len(line))
+
+		if it.jqFilter == nil {
+			response.Count += 1
+			response.Records = append(response.Records, record)
+		} else {
+			// apply filter on message
+
+			// bash example: echo {"foo": 0} | jq .foo
+			// bash example: echo [{"foo": 0}] | jq .[0]
+			// bash example: echo [{"foo": 0}] | jq .[0].foo
+			// ".foo | .."
+			// TODO: iterator checkpoint?
+			// TODO: save iterator last seek file?
+
+			jqIter := it.jqFilter.RunWithContext(c, record)
+			v, ok := jqIter.Next()
+			if ok {
+				// the message is matching the jq filter
+				response.Count += 1
+				response.Records = append(response.Records, v)
+			} else {
+				if err, isAnError := v.(error); isAnError {
+					// invalid (TODO: decide to keep or to skip the message)
+					it.logger.Error(
+						"jq error",
+						zap.String("topic", "stream"),
+						zap.String("method", "GetRecords"),
+						zap.String("stream.uuid", it.streamUUID.String()),
+						zap.String("jq", it.jqFilter.String()),
+						zap.Error(err),
+					)
+					response.CountErrors += 1
+				} else {
+					// does not match the jq filter therefore skip the message
+					response.CountSkipped += 1
+				}
+			}
+		}
+
+		if len(response.Records) >= maxRecords {
+			response.Remain = true
+			break
+		}
+	}
+
+	it.Stats.RecordsErrors += response.CountErrors
+	it.Stats.RecordsSkipped += response.CountSkipped
+	it.Stats.RecordsSent += response.Count
+	it.SaveSeek()
+	response.Status = "success"
+	return &response, nil
+}
+
+func NewStreamIterator(streamUUID StreamUUID, iteratorUUID StreamIteratorUUID, r *StreamIteratorRequest, handler IStreamIteratorHandler, logger *zap.Logger) (*StreamIterator, error) {
 	var jqFilter *gojq.Query = nil
 	if r.JqFilter != "" {
 		var errJq error
@@ -126,10 +178,12 @@ func CreateRecordsIterator(r *StreamIteratorRequest) (*StreamIterator, error) {
 	}
 
 	it := StreamIterator{
-		UUID:     uuid.New(),
-		request:  r,
-		jqFilter: jqFilter,
-		file:     nil,
+		streamUUID: streamUUID,
+		itUUID:     iteratorUUID,
+		request:    r,
+		jqFilter:   jqFilter,
+		handler:    handler,
+		logger:     logger,
 	}
 
 	return &it, nil

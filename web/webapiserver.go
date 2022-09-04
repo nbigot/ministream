@@ -96,7 +96,7 @@ func AddRoutes(app *fiber.App) {
 	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionGetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamProperties)
 	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionSetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), SetStreamProperties)
 	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionUpdateStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), UpdateStreamProperties)
-	apiStream.Get("/:streamuuid/raw", rbac.RBACProtected(rbac.ActionGetStreamRawFile, GetStreamPropertiesForABAC, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamRawFile)
+	//apiStream.Get("/:streamuuid/raw", rbac.RBACProtected(rbac.ActionGetStreamRawFile, GetStreamPropertiesForABAC, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamRawFile)
 	apiStream.Post("/", rbac.RBACProtected(rbac.ActionCreateStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CreateStream)
 	apiStream.Delete("/:streamuuid", rbac.RBACProtected(rbac.ActionDeleteStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), DeleteStream)
 	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(rbac.ActionRebuildIndex, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), RebuildIndex)
