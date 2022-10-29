@@ -12,7 +12,7 @@ type StreamIteratorRequest struct {
 
 type IStreamIteratorHandler interface {
 	Open() error
-	Close()
+	Close() error
 	Seek(request *StreamIteratorRequest) error
 	SaveSeek() error
 	GetNextRecord() (interface{}, bool, bool, error)

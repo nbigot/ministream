@@ -22,59 +22,24 @@ import (
 type StreamMap = map[StreamUUID]*Stream
 
 type Service struct {
-	Hashmap StreamMap
-	//Account      *Account
-	StreamsMutex sync.Mutex
-	logger       *zap.Logger
-	sp           storageprovider.IStorageProvider
-	conf         *config.Config
-}
-
-// type streamListSerializeStruct struct {
-// 	StreamsUUID []StreamUUID `json:"streams"`
-// }
-
-func NewStreamService(logger *zap.Logger, conf *config.Config) (*Service, error) {
-	sp, err := storageprovider.NewStorageProvider(logger, conf)
-	if err != nil {
-		return nil, err
-	}
-	return &Service{logger: logger, conf: conf, sp: sp, Hashmap: make(StreamMap)}, nil
+	Hashmap  StreamMap
+	mapMutex sync.RWMutex
+	logger   *zap.Logger
+	sp       storageprovider.IStorageProvider
+	conf     *config.Config
 }
 
 func (svc *Service) Init() {
 	svc.sp.Init()
 }
 
-// func (db *StreamsDB) LoadAccount(filename string) error {
-// 	db.StreamsMutex.Lock()
-// 	defer db.StreamsMutex.Unlock()
-
-// 	account, err := LoadAccount(filename)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	db.Account = account
-// 	return nil
-// }
-
-func (svc *Service) LoadStreams() (StreamInfoList, error) {
-	svc.StreamsMutex.Lock()
-	defer svc.StreamsMutex.Unlock()
-
-	return svc.sp.LoadStreams()
-}
-
-func (svc *Service) CreateStream(properties *StreamProperties) (*Stream, error) {
-	svc.StreamsMutex.Lock()
-	defer svc.StreamsMutex.Unlock()
-
+func (svc *Service) startStream(info *StreamInfo) (*Stream, error) {
 	var err error
 	var writer buffering.IStreamWriter
-	uuid := svc.sp.GenerateNewStreamUuid()
-	info := NewStreamInfo(uuid)
 	if writer, err = svc.sp.NewStreamWriter(info); err != nil {
+		return nil, err
+	}
+	if err = writer.Init(); err != nil {
 		return nil, err
 	}
 	ingestBuffer := buffering.NewStreamIngestBuffer(
@@ -83,67 +48,119 @@ func (svc *Service) CreateStream(properties *StreamProperties) (*Stream, error) 
 		config.Configuration.Streams.ChannelBufferSize,
 		writer,
 	)
-	s := NewStream(info, ingestBuffer, log.Logger)
-	s.SetProperties(properties)
+	s := NewStream(info, ingestBuffer, log.Logger, svc.conf.Streams.LogVerbosity)
 
-	if err = svc.sp.OnCreateStream(s.GetInfo()); err != nil {
-		return nil, err
+	svc.setStreamMap(s.GetUUID(), s)
+	svc.logger.Info(
+		"Start stream",
+		zap.String("topic", "stream"),
+		zap.String("method", "startStream"),
+		zap.String("stream.uuid", info.UUID.String()),
+	)
+
+	return s, s.Start()
+}
+
+func (svc *Service) LoadStreams() (StreamInfoList, error) {
+	streamInfoList, err := svc.sp.LoadStreams()
+	if err != nil {
+		return streamInfoList, err
 	}
 
-	svc.Hashmap[s.GetUUID()] = s
+	var errStartStream error = nil
+	wg := sync.WaitGroup{}
+	for _, streamInfo := range streamInfoList {
+		wg.Add(1)
+		go func(info *StreamInfo) {
+			if _, err := svc.startStream(info); err != nil {
+				errStartStream = err
+			}
+			wg.Done()
+		}(streamInfo)
+	}
+	wg.Wait()
+
+	return streamInfoList, errStartStream
+}
+
+func (svc *Service) CreateStream(properties *StreamProperties) (*Stream, error) {
+	uuid := svc.sp.GenerateNewStreamUuid()
+
 	svc.logger.Info(
 		"Create stream",
 		zap.String("topic", "stream"),
 		zap.String("method", "CreateStream"),
 		zap.String("stream.uuid", uuid.String()),
 	)
-	// save stream list
-	//if err := CronJobStreamsSaver.SendRequest(true); err != nil {
+
+	var err error
+	info := NewStreamInfo(uuid)
+	info.Properties = *properties
+
+	if err = svc.sp.OnCreateStream(info); err != nil {
+		return nil, err
+	}
+
+	var s *Stream
+	if s, err = svc.startStream(info); err != nil {
+		return s, err
+	}
+
 	if err = svc.saveStreamCatalog(); err != nil {
 		return s, err
 	}
-	// save Catalog
-	s.StartDeferedSaveTimer()
+
 	return s, nil
 }
 
 func (svc *Service) saveStreamCatalog() error {
+	// save stream list
 	return svc.sp.SaveStreamCatalog(svc.GetStreamsUUIDs())
 }
 
-func (svc *Service) DeleteStream(uuid StreamUUID) error {
-	svc.StreamsMutex.Lock()
-	defer svc.StreamsMutex.Unlock()
+func (svc *Service) DeleteStream(streamUUID StreamUUID) error {
+	var err error
 
-	s := svc.GetStream(uuid)
+	s := svc.GetStream(streamUUID)
 	if s == nil {
-		err := errors.New("Stream not found")
+		err = errors.New("stream not found")
 		svc.logger.Error(
 			"Cannot delete stream",
 			zap.String("topic", "stream"),
 			zap.String("method", "DeleteStream"),
-			zap.String("StreamUUID", uuid.String()),
+			zap.String("StreamUUID", streamUUID.String()),
 			zap.Error(err),
 		)
 		return err
 	}
 
-	// TODO:
-	// save new stream (create dirs)
-	// save Streams
-	CronJobStreamsSaver.SendRequest(true)
-	// save Catalog
-	delete(svc.Hashmap, uuid)
+	if err = s.Close(); err != nil {
+		return err
+	}
+	if err = svc.sp.DeleteStream(streamUUID); err != nil {
+		return err
+	}
+
+	// delete uuid from hashmap
+	svc.setStreamMap(streamUUID, nil)
+
+	if err = svc.saveStreamCatalog(); err != nil {
+		return err
+	}
+
 	svc.logger.Info(
 		"Stream deleted",
 		zap.String("topic", "stream"),
 		zap.String("method", "DeleteStream"),
-		zap.String("StreamUUID", uuid.String()),
+		zap.String("StreamUUID", streamUUID.String()),
 	)
 	return nil
 }
 
 func (svc *Service) GetStream(uuid StreamUUID) *Stream {
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
+
 	if s, found := svc.Hashmap[uuid]; found {
 		return s
 	}
@@ -152,6 +169,9 @@ func (svc *Service) GetStream(uuid StreamUUID) *Stream {
 }
 
 func (svc *Service) GetStreamsUUIDs() StreamUUIDList {
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
+
 	uuids := make([]StreamUUID, 0, len(svc.Hashmap))
 	for k := range svc.Hashmap {
 		uuids = append(uuids, k)
@@ -160,6 +180,9 @@ func (svc *Service) GetStreamsUUIDs() StreamUUIDList {
 }
 
 func (svc *Service) GetStreamsUUIDsFiltered(jqFilter ...*gojq.Query) StreamUUIDList {
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
+
 	uuids := make([]StreamUUID, 0, len(svc.Hashmap))
 	for uuid := range svc.Hashmap {
 		s := svc.GetStream(uuid)
@@ -183,6 +206,11 @@ func (svc *Service) GetStreamsUUIDsFiltered(jqFilter ...*gojq.Query) StreamUUIDL
 }
 
 func (svc *Service) GetStreamsFiltered(jqFilter ...*gojq.Query) *[]*Stream {
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
+	// TODO: should be able to filter on meta data also
+	// [.result.rows[] | select((.creationDate >= "2022-10-09T00:00:00.0000000+02:00") and (.cptMessages > 10000))] | sort_by(.sizeInBytes)
+	// TODO: rename cptMessages into cptRecords
 	rows := make([]*Stream, 0, len(svc.Hashmap))
 	for _, s := range svc.Hashmap {
 		if s != nil {
@@ -202,33 +230,6 @@ func (svc *Service) GetStreamsFiltered(jqFilter ...*gojq.Query) *[]*Stream {
 		}
 	}
 	return &rows
-}
-
-func (svc *Service) loadStreamsFromUUIDs(streamUUIDs StreamUUIDList) error {
-	var err error
-	var info *StreamInfo
-	var writer buffering.IStreamWriter
-
-	for _, streamUUID := range streamUUIDs {
-		if info, err = svc.sp.LoadStreamFromUUID(streamUUID); err != nil {
-			return err
-		}
-		if writer, err = svc.sp.NewStreamWriter(info); err != nil {
-			return err
-		}
-		ingestBuffer := buffering.NewStreamIngestBuffer(
-			time.Duration(config.Configuration.Streams.BulkFlushFrequency)*time.Second,
-			config.Configuration.Streams.BulkMaxSize,
-			config.Configuration.Streams.ChannelBufferSize,
-			writer,
-		)
-		s := NewStream(info, ingestBuffer, svc.logger)
-		svc.Hashmap[streamUUID] = s
-		s.Log()
-		s.StartDeferedSaveTimer()
-	}
-
-	return nil
 }
 
 func (svc *Service) CreateRecordsIterator(streamPtr *Stream, req *StreamIteratorRequest) (StreamIteratorUUID, *APIError) {
@@ -263,7 +264,18 @@ func (svc *Service) CreateRecordsIterator(streamPtr *Stream, req *StreamIterator
 		return uuid.Nil, &APIError{
 			Message:    "cannot create stream iterator",
 			Details:    err.Error(),
-			Code:       constants.ErrorInvalidCreateRecordsIteratorRequest,
+			Code:       constants.ErrorCantCreateRecordsIterator,
+			HttpCode:   fiber.StatusBadRequest,
+			StreamUUID: streamUUID,
+			Err:        err,
+		}
+	}
+
+	if err = iter.Open(); err != nil {
+		return uuid.Nil, &APIError{
+			Message:    "cannot open stream iterator",
+			Details:    err.Error(),
+			Code:       constants.ErrorCantCreateRecordsIterator,
 			HttpCode:   fiber.StatusBadRequest,
 			StreamUUID: streamUUID,
 			Err:        err,
@@ -279,6 +291,34 @@ func (svc *Service) GetLogger() *zap.Logger {
 
 func (svc *Service) BuildIndex(streamUUID StreamUUID) (interface{}, error) {
 	return svc.sp.BuildIndex(streamUUID)
+}
+
+func (svc *Service) Stop() {
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
+
+	wg := sync.WaitGroup{}
+	for _, streamPtr := range svc.Hashmap {
+		wg.Add(1)
+		go func(s *Stream) {
+			s.Close()
+			wg.Done()
+		}(streamPtr)
+	}
+	wg.Wait()
+	svc.sp.Stop()
+	svc.Hashmap = make(StreamMap)
+}
+
+func (svc *Service) setStreamMap(streamUUID StreamUUID, s *Stream) {
+	svc.mapMutex.Lock()
+	defer svc.mapMutex.Unlock()
+
+	if s == nil {
+		delete(svc.Hashmap, streamUUID)
+	} else {
+		svc.Hashmap[streamUUID] = s
+	}
 }
 
 func NewService() *Service {
@@ -301,14 +341,18 @@ func NewService() *Service {
 		)
 	}
 
-	//context.Background()
-	//context.TODO()
-	//ctx, cancel := context.WithCancel(context.Background())
-
 	log.Logger.Info(
 		"Stream server started",
 		zap.String("topic", "server"),
 		zap.String("method", "GoServer"),
 	)
 	return svc
+}
+
+func NewStreamService(logger *zap.Logger, conf *config.Config) (*Service, error) {
+	sp, err := storageprovider.NewStorageProvider(logger, conf)
+	if err != nil {
+		return nil, err
+	}
+	return &Service{logger: logger, conf: conf, sp: sp, Hashmap: make(StreamMap)}, nil
 }

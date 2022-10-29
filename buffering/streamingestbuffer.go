@@ -7,7 +7,10 @@ import (
 )
 
 type IStreamWriter interface {
-	Write(record *[]DeferedStreamRecord)
+	Init() error
+	Open() error
+	Close() error
+	Write(record *[]DeferedStreamRecord) error
 }
 
 type StreamIngestBuffer struct {
@@ -19,9 +22,6 @@ type StreamIngestBuffer struct {
 	bufferedStateUpdates Size64
 	mu                   sync.Mutex
 	writer               IStreamWriter
-	// variables used for handling shutdown
-	//done chan struct{}
-	//wg   sync.WaitGroup
 }
 
 func NewStreamIngestBuffer(bulkFlushFrequency time.Duration, bulkMaxSize int, channelBufferSize int, writer IStreamWriter) *StreamIngestBuffer {
@@ -32,8 +32,6 @@ func NewStreamIngestBuffer(bulkFlushFrequency time.Duration, bulkMaxSize int, ch
 		bufferedStateUpdates: 0,
 		channelMsg:           make(chan DeferedStreamRecord, channelBufferSize),
 		writer:               writer,
-		//done:                 make(chan struct{}),
-		//wg:                   sync.WaitGroup{},
 	}
 }
 
@@ -63,8 +61,8 @@ func (s *StreamIngestBuffer) Clear() {
 	s.msgBuffer = nil
 }
 
-func (s *StreamIngestBuffer) GetBuffer() []DeferedStreamRecord {
-	return s.msgBuffer
+func (s *StreamIngestBuffer) GetBuffer() *[]DeferedStreamRecord {
+	return &s.msgBuffer
 }
 
 func (s *StreamIngestBuffer) GetBulkFlushFrequency() time.Duration {
@@ -75,9 +73,19 @@ func (s *StreamIngestBuffer) GetChannelMsg() chan DeferedStreamRecord {
 	return s.channelMsg
 }
 
-func (s *StreamIngestBuffer) Save() {
-	s.mu.Lock()
-	s.writer.Write(&s.msgBuffer)
+func (s *StreamIngestBuffer) Save() error {
+	s.Lock()
+	defer s.Unlock()
+
+	if err := s.writer.Write(&s.msgBuffer); err != nil {
+		return err
+	}
 	s.Clear()
-	s.mu.Unlock()
+	return nil
+}
+
+func (s *StreamIngestBuffer) Close() error {
+	s.Lock()
+	defer s.Unlock()
+	return s.writer.Close()
 }

@@ -45,33 +45,45 @@ func RBACHandlerLogAccessGranted(c *fiber.Ctx) error {
 
 func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error) error {
 	action := ""
+	internalError := false
 	m := c.Locals(constants.RBACContextKey)
 	if m == nil {
-		m = errors.New("RBAC map attributes not found")
+		internalError = true
 	} else {
 		reason := m.(map[string]*string)
 		action = *reason["action"]
 	}
 
 	if config.Configuration.AuditLog.Enable {
-
-		value := c.Locals(constants.JWTContextKey)
-		if value == nil {
-			return errors.New("JWT not found")
+		if internalError {
+			log.Logger.Error(
+				"RBAC internal error",
+				zap.String("topic", "RBAC"),
+				zap.String("method", "RBACHandlerLogAccessGranted"),
+				zap.Any("rbac", m),
+				zap.String("ipAddress", c.IP()),
+				zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
+				zap.String("reason", "RBAC map attributes not found"),
+				zap.String("details", err.Error()),
+			)
+		} else {
+			value := c.Locals(constants.JWTContextKey)
+			if value == nil {
+				return errors.New("JWT not found")
+			}
+			token := value.(*jwt.Token)
+			claims := token.Claims.(jwt.MapClaims)
+			log.Logger.Info(
+				"RBAC Access denied",
+				zap.String("topic", "RBAC"),
+				zap.String("method", "RBACHandlerLogAccessGranted"),
+				zap.Any("rbac", m),
+				zap.String("accountId", claims["account"].(string)),
+				zap.String("jti", claims["jti"].(string)),
+				zap.String("ipAddress", c.IP()),
+				zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
+			)
 		}
-		token := value.(*jwt.Token)
-		claims := token.Claims.(jwt.MapClaims)
-
-		log.Logger.Info(
-			"RBAC Access denied",
-			zap.String("topic", "RBAC"),
-			zap.String("method", "RBACHandlerLogAccessGranted"),
-			zap.Any("rbac", m),
-			zap.String("accountId", claims["account"].(string)),
-			zap.String("jti", claims["jti"].(string)),
-			zap.String("ipAddress", c.IP()),
-			zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
-		)
 	}
 
 	if err != nil {

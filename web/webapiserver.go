@@ -92,11 +92,10 @@ func AddRoutes(app *fiber.App) {
 	apiStream.Post("/:streamuuid/iterator", rbac.RBACProtected(rbac.ActionCreateRecordsIterator, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CreateRecordsIterator)
 	apiStream.Get("/:streamuuid/iterator/:iteratoruuid/stats", rbac.RBACProtected(rbac.ActionGetRecordsIteratorStats, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetRecordsIteratorStats)
 	apiStream.Delete("/:streamuuid/iterator/:iteratoruuid", rbac.RBACProtected(rbac.ActionCloseRecordsIterator, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CloseRecordsIterator)
-	apiStream.Get("/:streamuuid", rbac.RBACProtected(rbac.ActionGetStreamDescription, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamDescription)
+	apiStream.Get("/:streamuuid", rbac.RBACProtected(rbac.ActionGetStreamDescription, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamInformation)
 	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionGetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamProperties)
 	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionSetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), SetStreamProperties)
 	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionUpdateStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), UpdateStreamProperties)
-	//apiStream.Get("/:streamuuid/raw", rbac.RBACProtected(rbac.ActionGetStreamRawFile, GetStreamPropertiesForABAC, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamRawFile)
 	apiStream.Post("/", rbac.RBACProtected(rbac.ActionCreateStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CreateStream)
 	apiStream.Delete("/:streamuuid", rbac.RBACProtected(rbac.ActionDeleteStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), DeleteStream)
 	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(rbac.ActionRebuildIndex, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), RebuildIndex)
@@ -105,14 +104,6 @@ func AddRoutes(app *fiber.App) {
 	apiStreams.Get("/", rbac.RBACProtected(rbac.ActionListStreams, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListStreams)
 	apiStreams.Get("/properties", rbac.RBACProtected(rbac.ActionListStreamsProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListStreamsProperties)
 
-	apiJob := api.Group("/job", JWTProtected(), RateLimiterJobs())
-	apiJob.Get("/:jobuuid", GetJob)
-	apiJob.Post("/", CreateJob)
-	apiJob.Delete("/:jobuuid", DeleteJob)
-
-	apiJobs := api.Group("/jobs", JWTProtected(), RateLimiterJobs())
-	apiJobs.Get("/", ListJobs)
-
 	apiUser := api.Group("/user", RateLimiterAccounts())
 	apiUser.Get("/login", LoginUser)
 
@@ -120,12 +111,12 @@ func AddRoutes(app *fiber.App) {
 	apiUsers.Get("/", JWTProtected(), rbac.RBACProtected(rbac.ActionListUsers, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListUsers)
 
 	apiAccount := api.Group("/account", RateLimiterAccounts())
-	apiAccount.Get("/validate", rbac.RBACProtected(rbac.ActionValidateApiKey, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ValidateApiKey)
+	apiAccount.Get("/validate", ValidateApiKey)
 	apiAccount.Get("/login", LoginAccount)
 	apiAccount.Get("/", JWTProtected(), rbac.RBACProtected(rbac.ActionGetAccount, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetAccount)
 
 	apiAdmin := api.Group("/admin", JWTProtected())
-	apiAdmin.Post("/server/stop", rbac.RBACProtected(rbac.ActionStopServer, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ApiServerStop)
+	apiAdmin.Post("/server/shutdown", rbac.RBACProtected(rbac.ActionShutdownServer, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ApiServerShutdown)
 	apiAdmin.Post("/server/reload/auth", rbac.RBACProtected(rbac.ActionReloadServerAuth, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ApiServerReloadAuth)
 	apiAdmin.Post("/jwt/revoke", rbac.RBACProtected(rbac.ActionJWTRevokeAll, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ActionJWTRevokeAll)
 

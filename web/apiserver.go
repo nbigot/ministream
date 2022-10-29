@@ -6,16 +6,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// ApiServerStop godoc
-// @Summary Stop server
-// @Description Stop server
-// @ID server-stop
+// ApiServerShutdown godoc
+// @Summary Shutdown server
+// @Description Shutdown server
+// @ID server-shutdown
 // @Accept json
 // @Produce json
 // @Tags Admin
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
-// @Router /api/v1//admin/server/stop [post]
-func ApiServerStop(c *fiber.Ctx) error {
+// @Router /api/v1//admin/server/shutdown [post]
+func ApiServerShutdown(c *fiber.Ctx) error {
 	StopServer()
 	return c.JSON(
 		JSONResultSuccess{

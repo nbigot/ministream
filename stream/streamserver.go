@@ -3,35 +3,14 @@ package stream
 import (
 	"ministream/account"
 	"ministream/config"
-	"ministream/cron"
 	"ministream/log"
 	"ministream/rbac"
-	"time"
 
 	"go.uber.org/zap"
 )
 
-type CronJobStreamsSaverHandler struct {
-	//Coucou int
-}
-
-func (h CronJobStreamsSaverHandler) Exec(eventTime *time.Time, c *cron.CronJob) error {
-	//log.Logger.Info("On save streams 1", zap.Int("coucou", h.Coucou))
-	log.Logger.Info("On save streams", zap.Time("eventTime", *eventTime))
-	//panic(errors.New("fake fail"))
-	//return errors.New("fake fail")
-	return nil
-}
-
-var CronJobStreamsSaver *cron.CronJob
-var streamsSaverHander cron.CronJobHandler = CronJobStreamsSaverHandler{}
-
 func init() {
-	//saverHander.Coucou = 1
-	CronJobStreamsSaver = cron.MakeCronJob(5, 10, streamsSaverHander)
-	//saverHander.Coucou = 2
 }
-
 
 func LoadServerAuthConfig() {
 	log.Logger.Info(

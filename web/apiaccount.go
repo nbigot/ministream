@@ -50,7 +50,7 @@ func GetAccount(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Account
 // @Param API-KEY header string true "API-KEY"
-// @Success 200 {object} stream.StreamUUID  "successful operation"
+// @success 200 {object} web.JSONResultSuccess{} "successful operation"
 // @Failure 400 {object} apierror.APIError
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/account/validate [get]
@@ -78,7 +78,12 @@ func ValidateApiKey(c *fiber.Ctx) error {
 			zap.String("ipAddress", c.IP()),
 			zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
 		)
-		return c.JSON(fiber.Map{"status": "success", "valid": true})
+		return c.JSON(
+			JSONResultSuccess{
+				Code:    fiber.StatusOK,
+				Message: "success",
+			},
+		)
 	}
 
 	log.Logger.Info(

@@ -14,15 +14,15 @@ var registry = make(map[string]Factory)
 
 func Register(name string, factory Factory) error {
 	if name == "" {
-		return fmt.Errorf("Error registering storage provider: name cannot be empty")
+		return fmt.Errorf("error registering storage provider: name cannot be empty")
 	}
 
 	if factory == nil {
-		return fmt.Errorf("Error registering storage provider '%v': factory cannot be empty", name)
+		return fmt.Errorf("error registering storage provider '%v': factory cannot be empty", name)
 	}
 
 	if _, found := registry[name]; found {
-		return fmt.Errorf("Error registering storage provider '%v': already registered", name)
+		return fmt.Errorf("error registering storage provider '%v': already registered", name)
 	}
 
 	registry[name] = factory
@@ -31,7 +31,7 @@ func Register(name string, factory Factory) error {
 
 func GetFactory(name string) (Factory, error) {
 	if _, found := registry[name]; !found {
-		return nil, fmt.Errorf("Error creating storage provider. No such storage provider type exists: '%v'", name)
+		return nil, fmt.Errorf("error creating storage provider. No such storage provider type exists: '%v'", name)
 	}
 	return registry[name], nil
 }

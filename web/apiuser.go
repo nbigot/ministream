@@ -21,10 +21,10 @@ import (
 // @Accept json
 // @Produce json
 // @Tags User
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @Success 200 {object} web.JSONResultListUsers "successful operation"
 // @Router /api/v1/users [get]
 func ListUsers(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{"status": "success", "users": rbac.RbacMgr.Rbac.GetUserList()})
+	return c.JSON(JSONResultListUsers{Code: fiber.StatusOK, Users: rbac.RbacMgr.Rbac.GetUserList()})
 }
 
 // LoginUser godoc

@@ -21,11 +21,12 @@ import (
 type MsgOffset = int64
 
 type StreamIndexFile struct {
-	streamUUID uuid.UUID
-	logger     *zap.Logger
-	filename   string
-	file       *os.File
-	mu         sync.Mutex
+	streamUUID   uuid.UUID
+	logger       *zap.Logger
+	logVerbosity int
+	filename     string
+	file         *os.File
+	mu           sync.Mutex
 }
 
 type StreamIndexStats struct {
@@ -50,15 +51,16 @@ func GetIndexFilePath(streamUUID uuid.UUID) string {
 	return fmt.Sprintf("%sstreams/%s/index.bin", config.Configuration.DataDirectory, streamUUID.String())
 }
 
-func (idx *StreamIndexFile) Close() {
+func (idx *StreamIndexFile) Close() error {
 	if idx.file != nil {
-		idx.file.Close()
+		return idx.file.Close()
 	}
+
+	return nil
 }
 
 func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, error) {
 	// Build or rebuild index
-
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -159,14 +161,15 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 			return nil, err
 		}
 
-		// // Uncomment to debug
-		// idx.logger.Debug(
-		// 	"idx msg",
-		// 	zap.Int64("msglen", row.LengthInBytes),
-		// 	zap.Int64("offset", msgOffset),
-		// 	zap.Uint64("msgindex", message.Id),
-		// 	zap.Time("timestamp", message.CreationDate),
-		// )
+		if idx.logVerbosity > 0 {
+			idx.logger.Debug(
+				"idx msg",
+				zap.Int64("msglen", row.LengthInBytes),
+				zap.Int64("offset", msgOffset),
+				zap.Uint64("msgindex", message.Id),
+				zap.Time("timestamp", message.CreationDate),
+			)
+		}
 
 		if msgOffset == 0 {
 			stats.FirstMsgId = message.Id
@@ -457,16 +460,15 @@ func (idx *StreamIndexFile) Log() {
 		zap.String("method", "Log"),
 		zap.String("stream.uuid", idx.streamUUID.String()),
 		zap.String("index.filepath", idx.filename),
-		//zap.Time("stream.creationDate", s.CreationDate),
-		// zap.Time("stream.lastUpdate", s.LastUpdate),
-		// zap.Uint64("stream.cptMessages", uint64(s.CptMessages)),
-		// zap.String("stream.cptMessagesHumanized", humanize.Comma(int64(s.CptMessages))),
-		// zap.Uint64("stream.sizeInBytes", uint64(s.SizeInBytes)),
-		// zap.String("stream.sizeHumanized", humanize.Bytes(uint64(s.SizeInBytes))),
-		// zap.Any("stream.properties", s.Properties),
 	)
 }
 
 func NewStreamIndex(streamUUID uuid.UUID, logger *zap.Logger) *StreamIndexFile {
-	return &StreamIndexFile{streamUUID: streamUUID, logger: logger, filename: GetIndexFilePath(streamUUID), file: nil}
+	return &StreamIndexFile{
+		streamUUID:   streamUUID,
+		logger:       logger,
+		logVerbosity: 0,
+		filename:     GetIndexFilePath(streamUUID),
+		file:         nil,
+	}
 }

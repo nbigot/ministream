@@ -17,6 +17,46 @@ type StreamCatalogFile struct {
 	mu                    sync.Mutex
 }
 
+func (s *StreamCatalogFile) Init() error {
+	return s.EnsureCatalogFileExists()
+}
+
+func (s *StreamCatalogFile) EnsureCatalogFileExists() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// if file already exists then do nothing
+	if _, err := os.Stat(s.streamCatalogFilepath); err == nil {
+		return nil
+	}
+
+	// create file having an empty catalog of streams
+	obj := streamListSerializeStruct{}
+	if sJson, err := json.Marshal(obj); err != nil {
+		s.logger.Fatal(
+			"Can't serialize json stream list",
+			zap.String("topic", "stream"),
+			zap.String("method", "EnsureCatalogFileExists"),
+			zap.String("filename", s.streamCatalogFilepath),
+			zap.Error(err),
+		)
+		return err
+	} else {
+		if err := ioutil.WriteFile(s.streamCatalogFilepath, sJson, 0644); err != nil {
+			s.logger.Fatal(
+				"Can't save streams",
+				zap.String("topic", "stream"),
+				zap.String("method", "EnsureCatalogFileExists"),
+				zap.String("filename", s.streamCatalogFilepath),
+				zap.Error(err),
+			)
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *StreamCatalogFile) SaveStreamCatalog(streamUUIDs types.StreamUUIDList) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

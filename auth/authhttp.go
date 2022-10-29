@@ -59,7 +59,6 @@ func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	}
 	client := &http.Client{Timeout: time.Second * time.Duration(m.timeoutInSec), Transport: transport}
 
-	//r, _ := http.NewRequest(http.MethodGet, apiUrl, strings.NewReader(""))
 	r, _ := http.NewRequest(http.MethodGet, apiUrl.String(), nil)
 	if m.authToken != "" {
 		r.Header.Add("Authorization", fmt.Sprintf("auth_token=\"%s\"", m.authToken))

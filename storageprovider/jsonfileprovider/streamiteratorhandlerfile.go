@@ -11,12 +11,14 @@ import (
 	"go.uber.org/zap"
 )
 
+const EOLChar = '\n'
+
 type StreamIteratorHandlerFile struct {
 	// implements IStreamIteratorHandler interface
 	streamUUID  types.StreamUUID
 	itUUID      types.StreamIteratorUUID
 	initialized bool
-	file        *os.File // data file
+	file        *os.File
 	filename    string
 	FileOffset  int64
 	bytesRead   int64
@@ -26,6 +28,7 @@ type StreamIteratorHandlerFile struct {
 }
 
 func (h *StreamIteratorHandlerFile) Open() error {
+	// open the json data file
 	if h.filename == "" {
 		return errors.New("empty stream filename")
 	}
@@ -44,16 +47,18 @@ func (h *StreamIteratorHandlerFile) Open() error {
 	return nil
 }
 
-func (h *StreamIteratorHandlerFile) Close() {
+func (h *StreamIteratorHandlerFile) Close() error {
 	if h.file != nil {
 		h.file.Close()
 		h.file = nil
 	}
 
-	if h.file != nil {
+	if h.index != nil {
 		h.index.Close()
 		h.index = nil
 	}
+
+	return nil
 }
 
 func (h *StreamIteratorHandlerFile) Seek(request *types.StreamIteratorRequest) error {
@@ -82,9 +87,10 @@ func (h *StreamIteratorHandlerFile) Seek(request *types.StreamIteratorRequest) e
 	}
 
 	if err == nil {
+		if _, err = h.file.Seek(h.FileOffset, io.SeekStart); err != nil {
+			return err
+		}
 		h.initialized = true
-		_, err = h.file.Seek(h.FileOffset, io.SeekStart)
-
 		h.reader = bufio.NewReaderSize(h.file, 1024*1024)
 		h.reader.Reset(h.file)
 	}
@@ -99,16 +105,17 @@ func (h *StreamIteratorHandlerFile) SaveSeek() error {
 }
 
 func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, error) {
-	line, err := h.reader.ReadString('\n')
-	if err != nil {
-		// err is ofter io.EOF (end of file reached)
+	line, errRead := h.reader.ReadString(EOLChar)
+	if errRead != nil {
+		// err is often io.EOF (end of file reached)
 		// err may also raise when EOL char was not found
-		if err = h.SaveSeek(); err != nil {
+		errSeek := h.SaveSeek()
+		if errSeek != nil {
 			// result is: (no record, no record found, cannot continue, error)
-			return nil, false, false, err
+			return nil, false, false, errSeek
 		}
 
-		if err == io.EOF {
+		if errRead == io.EOF {
 			// result is: (no record, no record found, cannot continue, no error)
 			return nil, false, false, nil
 		} else {
@@ -119,18 +126,17 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, er
 				zap.String("stream.uuid", h.streamUUID.String()),
 				zap.String("it.uuid", h.itUUID.String()),
 				zap.String("line", line),
-				zap.Error(err),
+				zap.Error(errRead),
 			)
 			// result is: (no record, no record found (or cannot read it), cannot continue, error)
-			return nil, true, false, err
+			return nil, true, false, errRead
 		}
 	}
 
 	h.bytesRead += int64(len(line))
 
 	var message interface{}
-	err2 := json.Unmarshal([]byte(line), &message)
-	if err2 != nil {
+	if errUnmarshal := json.Unmarshal([]byte(line), &message); errUnmarshal != nil {
 		h.logger.Error(
 			"json format error",
 			zap.String("topic", "streamiterator"),
@@ -138,20 +144,27 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, er
 			zap.String("stream.uuid", h.streamUUID.String()),
 			zap.String("it.uuid", h.itUUID.String()),
 			zap.String("line", line),
-			zap.Error(err),
+			zap.Error(errUnmarshal),
 		)
 		// result is: (no record, record found, may continue, error)
-		return nil, true, true, err
+		return nil, true, true, errUnmarshal
 	}
 
 	// result is: (valid record, record found, may continue, no error)
 	return message, true, true, nil
 }
 
-func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, logger *zap.Logger) *StreamIteratorHandlerFile {
+func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, filename string, logger *zap.Logger) *StreamIteratorHandlerFile {
 	return &StreamIteratorHandlerFile{
-		streamUUID: streamUUID,
-		itUUID:     iteratorUUID,
-		logger:     logger,
+		streamUUID:  streamUUID,
+		itUUID:      iteratorUUID,
+		initialized: false,
+		file:        nil,
+		filename:    filename,
+		FileOffset:  0,
+		bytesRead:   0,
+		index:       nil,
+		reader:      nil,
+		logger:      logger,
 	}
 }

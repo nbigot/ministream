@@ -4,6 +4,7 @@
 /.idea
 /.intellij
 /build
+/ignore
 
 # Binaries for programs and plugins
 *.exe

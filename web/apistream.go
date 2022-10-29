@@ -116,7 +116,7 @@ func ListStreamsProperties(c *fiber.Ctx) error {
 // @Accept json
 // @Produce json
 // @Tags Stream
-// @Success 201 {array} stream.StreamUUID
+// @Success 201 {array} types.StreamInfo
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream [post]
 func CreateStream(c *fiber.Ctx) error {
@@ -151,7 +151,7 @@ func CreateStream(c *fiber.Ctx) error {
 		zap.String("streamUUID", s.GetUUID().String()),
 	)
 
-	return c.Status(fiber.StatusCreated).JSON(s)
+	return c.Status(fiber.StatusCreated).JSON(s.GetInfo())
 }
 
 // SetStreamProperties godoc
@@ -162,7 +162,7 @@ func CreateStream(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamProperties "successful operation"
+// @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [post]
 func SetStreamProperties(c *fiber.Ctx) error {
@@ -191,7 +191,7 @@ func SetStreamProperties(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamProperties "successful operation"
+// @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [patch]
 func UpdateStreamProperties(c *fiber.Ctx) error {
@@ -220,7 +220,7 @@ func UpdateStreamProperties(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamProperties "successful operation"
+// @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [get]
 func GetStreamProperties(c *fiber.Ctx) error {
@@ -232,27 +232,6 @@ func GetStreamProperties(c *fiber.Ctx) error {
 	return c.JSON(streamPtr.GetProperties())
 }
 
-// GetStreamRawFile godoc
-// @Summary Get stream raw file
-// @Description Get the raw file for the given stream UUID
-// @ID stream-get-raw-file
-// @Accept json
-// @Produce json
-// @Tags Stream
-// @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamUUID "successful operation"
-// @Success 400 {object} apierror.APIError
-// @Router /api/v1/stream/{streamuuid}/raw [get]
-// func GetStreamRawFile(c *fiber.Ctx) error {
-// 	_, streamPtr, apiErr := GetStreamFromParameter(c)
-// 	if apiErr != nil {
-// 		return apiErr.HTTPResponse(c)
-// 	}
-
-// 	flagCompress := c.AcceptsEncodings("gzip") == "gzip"
-// 	return c.SendFile(streamPtr.GetDataFilePath(), flagCompress)
-// }
-
 // DeleteStream godoc
 // @Summary Delete a stream
 // @Description Delete a stream
@@ -261,7 +240,7 @@ func GetStreamProperties(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @success 200 {object} web.JSONResultSuccess{} "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid} [delete]
 func DeleteStream(c *fiber.Ctx) error {
@@ -293,27 +272,32 @@ func DeleteStream(c *fiber.Ctx) error {
 		zap.String("streamUUID", streamUUID.String()),
 	)
 
-	return c.JSON(fiber.Map{"status": "success", "message": "Stream deleted", "streamUUID": streamUUID})
+	return c.JSON(
+		JSONResultSuccess{
+			Code:    fiber.StatusOK,
+			Message: "success",
+		},
+	)
 }
 
-// GetStreamDescription godoc
-// @Summary Get stream description
-// @Description Get the description for the given stream UUID
-// @ID stream-get-description
+// GetStreamInformation godoc
+// @Summary Get stream information
+// @Description Get information for the given stream UUID
+// @ID stream-get-information
 // @Accept json
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.Stream "successful operation"
+// @Success 200 {object} types.StreamInfo
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid} [get]
-func GetStreamDescription(c *fiber.Ctx) error {
+func GetStreamInformation(c *fiber.Ctx) error {
 	_, streamPtr, apiErr := GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	return c.JSON(streamPtr)
+	return c.JSON(streamPtr.GetInfo())
 }
 
 // CreateRecordsIterator godoc
@@ -378,7 +362,7 @@ func CreateRecordsIterator(c *fiber.Ctx) error {
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
 // @Param iteratoruuid path string true "Iterator UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @Success 200 {object} stream.GetRecordsIteratorStatsResponse "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/stats [get]
@@ -419,30 +403,8 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 		StreamUUID:         streamUUID,
 		StreamIteratorUUID: streamIteratorUuid,
 		LastMessageIdRead:  it.LastMessageIdRead,
-		//FileOffset:         it.FileOffset,
 	}
 	return c.JSON(response)
-
-	// if err3 := streamPtr.CloseIterator(streamIteratorUuid); err3 != nil {
-	// 	vErr := ValidationError{FailedField: "streamiteratoruuid", Tag: "parameter", Value: c.Params("streamiteratoruuid")}
-	// 	httpError := APIError{
-	// 		Message:          "cannot close stream iterator uuid",
-	// 		Details:          err3.Error(),
-	// 		Code:             constants.ErrorCantCloseStreamIterator,
-	// 		HttpCode:         fiber.StatusBadRequest,
-	// 		ValidationErrors: []*ValidationError{&vErr},
-	// 		Err:              err3,
-	// 	}
-	// 	return httpError.HTTPResponse(c)
-	// }
-
-	// response := stream.CloseRecordsIteratorResponse{
-	// 	Status:             "success",
-	// 	Message:            "Stream iterator closed",
-	// 	StreamUUID:         streamUuid,
-	// 	StreamIteratorUUID: streamIteratorUuid,
-	// }
-	// return c.JSON(response)
 }
 
 // CloseRecordsIterator godoc
@@ -760,7 +722,7 @@ func GetStreamFromParameter(c *fiber.Ctx) (types.StreamUUID, *stream.Stream, *ap
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @Success 200 {object} stream.RebuildStreamIndexResponse
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/index/{streamuuid}/rebuild [post]
 func RebuildIndex(c *fiber.Ctx) error {
@@ -771,7 +733,8 @@ func RebuildIndex(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	indexStats, err := service.StreamService.BuildIndex(types.StreamUUID(streamUUID))
+	streamPtr.CloseIterators()
+	indexStats, err := service.StreamService.BuildIndex(streamUUID)
 	if err != nil {
 		httpError := apierror.APIError{
 			Message:    "cannot rebuild stream index",
@@ -833,7 +796,6 @@ func convertStreamListToJsonResult(streams *[]*stream.Stream) *JSONResultListStr
 		r = append(
 			r,
 			JSONResultListStreamsPropertiesResultRow{
-				//FilePath:     info.FilePath,
 				UUID:         info.UUID,
 				CptMessages:  info.CptMessages,
 				SizeInBytes:  info.SizeInBytes,

@@ -47,10 +47,10 @@ func (it *StreamIterator) Open() error {
 	return it.handler.Open()
 }
 
-func (it *StreamIterator) Close() {
+func (it *StreamIterator) Close() error {
 	it.request = nil
 	it.jqFilter = nil
-	it.handler.Close()
+	return it.handler.Close()
 }
 
 func (it *StreamIterator) Seek() error {

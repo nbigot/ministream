@@ -36,7 +36,6 @@ type GetRecordsIteratorStatsResponse struct {
 	StreamUUID         StreamUUID         `json:"streamUUID"`
 	StreamIteratorUUID StreamIteratorUUID `json:"streamIteratorUUID"`
 	LastMessageIdRead  MessageId          `json:"lastMessageRead"`
-	FileOffset         int64              `json:"fileOffset"`
 }
 
 type PutStreamRecordsResponse struct {

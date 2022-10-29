@@ -46,6 +46,20 @@ type JSONResultListStreamsPropertiesResultRow struct {
 	LastMsgId    types.MessageId        `json:"lastMsgId"`
 }
 
+type JSONResultListUsers struct {
+	Code  int      `json:"code" example:"200"`
+	Users []string `json:"users"`
+}
+
+type JSONResultPbkdf2 struct {
+	Code       int    `json:"code" example:"200"`
+	Message    string `json:"message" example:"success"`
+	Hash       string `json:"hash"`
+	Digest     string `json:"digest"`
+	Iterations int    `json:"iterations"`
+	Salt       string `json:"salt"`
+}
+
 func ValidateStruct(obj interface{}) []*apierror.ValidationError {
 	var errors []*apierror.ValidationError
 	validate := validator.New()
