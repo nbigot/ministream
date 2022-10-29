@@ -3,58 +3,13 @@ package stream
 import (
 	"ministream/account"
 	"ministream/config"
-	"ministream/cron"
 	"ministream/log"
 	"ministream/rbac"
-	"time"
 
 	"go.uber.org/zap"
 )
 
-type CronJobStreamsSaverHandler struct {
-	//Coucou int
-}
-
-func (h CronJobStreamsSaverHandler) Exec(eventTime *time.Time, c *cron.CronJob) error {
-	//log.Logger.Info("On save streams 1", zap.Int("coucou", h.Coucou))
-	log.Logger.Info("On save streams", zap.Time("eventTime", *eventTime))
-	//panic(errors.New("fake fail"))
-	//return errors.New("fake fail")
-	return nil
-}
-
-var CronJobStreamsSaver *cron.CronJob
-var streamsSaverHander cron.CronJobHandler = CronJobStreamsSaverHandler{}
-
 func init() {
-	//saverHander.Coucou = 1
-	CronJobStreamsSaver = cron.MakeCronJob(5, 10, streamsSaverHander)
-	//saverHander.Coucou = 2
-}
-
-func GoServer() {
-	LoadServerAuthConfig()
-
-	Streams.SetLogger(log.Logger)
-	err := Streams.LoadStreams(config.Configuration.StreamsFile)
-	if err != nil {
-		log.Logger.Fatal("Error while loading streams",
-			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
-			zap.String("filename", config.Configuration.StreamsFile),
-			zap.Error(err),
-		)
-	}
-
-	//context.Background()
-	//context.TODO()
-	//ctx, cancel := context.WithCancel(context.Background())
-
-	log.Logger.Info(
-		"Stream server started",
-		zap.String("topic", "server"),
-		zap.String("method", "GoServer"),
-	)
 }
 
 func LoadServerAuthConfig() {

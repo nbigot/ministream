@@ -6,7 +6,7 @@ import (
 	"ministream/config"
 	"ministream/constants"
 	"ministream/rbac"
-	. "ministream/web/apierror"
+	"ministream/web/apierror"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,14 +30,14 @@ func JWTProtected() func(*fiber.Ctx) error {
 
 func jwtError(c *fiber.Ctx, err error) error {
 	if err.Error() == "Missing or malformed JWT" {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "missing or malformed jwt",
 			Code:     constants.ErrorJWTMissingOrMalformed,
 			HttpCode: fiber.StatusBadRequest,
 		}
 		return httpError.HTTPResponse(c)
 	} else {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid or expired jwt",
 			Code:     constants.ErrorJWTInvalidOrExpired,
 			HttpCode: fiber.StatusUnauthorized,
@@ -60,7 +60,7 @@ func GetJWTClaim(c *fiber.Ctx, key string) (interface{}, error) {
 func JWTPostValidate(c *fiber.Ctx) error {
 	value := c.Locals(constants.JWTContextKey)
 	if value == nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid jwt",
 			Code:     constants.ErrorJWTInvalidOrExpired,
 			HttpCode: fiber.StatusUnauthorized,
@@ -75,7 +75,7 @@ func JWTPostValidate(c *fiber.Ctx) error {
 		claims["aud"] == config.Configuration.WebServer.JWT.Aud
 
 	if !valid {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "invalid jwt",
 			Code:     constants.ErrorJWTInvalidOrExpired,
 			HttpCode: fiber.StatusUnauthorized,
@@ -84,7 +84,7 @@ func JWTPostValidate(c *fiber.Ctx) error {
 	}
 
 	if int64(claims["iat"].(float64)) < config.Configuration.WebServer.JWT.RevokeEmittedBeforeDate.Unix() {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "jwt was revoked",
 			Code:     constants.ErrorJWTInvalidOrExpired,
 			HttpCode: fiber.StatusUnauthorized,
@@ -107,7 +107,7 @@ func JWTPostValidate(c *fiber.Ctx) error {
 			c.Locals(constants.UserContextKey, claims[constants.JWTClaimsUserKey])
 			c.Locals(constants.RolesContextKey, roles)
 		} else {
-			httpError := APIError{
+			httpError := apierror.APIError{
 				Message:  "invalid jwt",
 				Details:  err.Error(),
 				Code:     constants.ErrorJWTRBACUnknownRole,

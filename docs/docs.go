@@ -75,9 +75,9 @@ var doc = `{
                 }
             }
         },
-        "/api/v1//admin/server/stop": {
+        "/api/v1//admin/server/shutdown": {
             "post": {
-                "description": "Stop server",
+                "description": "Shutdown server",
                 "consumes": [
                     "application/json"
                 ],
@@ -87,8 +87,8 @@ var doc = `{
                 "tags": [
                     "Admin"
                 ],
-                "summary": "Stop server",
-                "operationId": "server-stop",
+                "summary": "Shutdown server",
+                "operationId": "server-shutdown",
                 "responses": {
                     "200": {
                         "description": "successful operation",
@@ -219,7 +219,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/web.JSONResultSuccess"
                         }
                     },
                     "400": {
@@ -383,7 +383,7 @@ var doc = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "string"
+                                "$ref": "#/definitions/types.StreamInfo"
                             }
                         }
                     },
@@ -422,9 +422,9 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "successful operation",
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/stream.RebuildStreamIndexResponse"
                         }
                     },
                     "500": {
@@ -438,7 +438,7 @@ var doc = `{
         },
         "/api/v1/stream/{streamuuid}": {
             "get": {
-                "description": "Get the description for the given stream UUID",
+                "description": "Get information for the given stream UUID",
                 "consumes": [
                     "application/json"
                 ],
@@ -448,8 +448,8 @@ var doc = `{
                 "tags": [
                     "Stream"
                 ],
-                "summary": "Get stream description",
-                "operationId": "stream-get-description",
+                "summary": "Get stream information",
+                "operationId": "stream-get-information",
                 "parameters": [
                     {
                         "type": "string",
@@ -462,9 +462,9 @@ var doc = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "successful operation",
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stream.Stream"
+                            "$ref": "#/definitions/types.StreamInfo"
                         }
                     },
                     "400": {
@@ -502,7 +502,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/web.JSONResultSuccess"
                         }
                     },
                     "400": {
@@ -688,7 +688,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/stream.GetRecordsIteratorStatsResponse"
                         }
                     },
                     "400": {
@@ -734,7 +734,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "$ref": "#/definitions/stream.StreamProperties"
+                            "$ref": "#/definitions/types.StreamProperties"
                         }
                     },
                     "400": {
@@ -772,7 +772,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "$ref": "#/definitions/stream.StreamProperties"
+                            "$ref": "#/definitions/types.StreamProperties"
                         }
                     },
                     "400": {
@@ -810,47 +810,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "$ref": "#/definitions/stream.StreamProperties"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/stream/{streamuuid}/raw": {
-            "get": {
-                "description": "Get the raw file for the given stream UUID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Stream"
-                ],
-                "summary": "Get stream raw file",
-                "operationId": "stream-get-raw-file",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid.UUID",
-                        "description": "Stream UUID",
-                        "name": "streamuuid",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/types.StreamProperties"
                         }
                     },
                     "400": {
@@ -1109,7 +1069,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/web.JSONResultListUsers"
                         }
                     }
                 }
@@ -1145,7 +1105,7 @@ var doc = `{
                     "200": {
                         "description": "successful operation",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/web.JSONResultPbkdf2"
                         }
                     },
                     "400": {
@@ -1277,6 +1237,26 @@ var doc = `{
                 }
             }
         },
+        "stream.GetRecordsIteratorStatsResponse": {
+            "type": "object",
+            "properties": {
+                "lastMessageRead": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "streamIteratorUUID": {
+                    "type": "string"
+                },
+                "streamUUID": {
+                    "type": "string"
+                }
+            }
+        },
         "stream.GetStreamRecordsResponse": {
             "type": "object",
             "properties": {
@@ -1361,7 +1341,25 @@ var doc = `{
                 }
             }
         },
-        "stream.Stream": {
+        "stream.RebuildStreamIndexResponse": {
+            "type": "object",
+            "properties": {
+                "duration": {
+                    "type": "integer"
+                },
+                "indexStats": {},
+                "message": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "streamUUID": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.StreamInfo": {
             "type": "object",
             "properties": {
                 "cptMessages": {
@@ -1371,9 +1369,6 @@ var doc = `{
                 "creationDate": {
                     "type": "string"
                 },
-                "filepath": {
-                    "type": "string"
-                },
                 "lastMsgId": {
                     "type": "integer"
                 },
@@ -1381,7 +1376,7 @@ var doc = `{
                     "type": "string"
                 },
                 "properties": {
-                    "$ref": "#/definitions/stream.StreamProperties"
+                    "$ref": "#/definitions/types.StreamProperties"
                 },
                 "sizeInBytes": {
                     "type": "integer",
@@ -1393,7 +1388,7 @@ var doc = `{
                 }
             }
         },
-        "stream.StreamProperties": {
+        "types.StreamProperties": {
             "type": "object",
             "additionalProperties": true
         },
@@ -1464,9 +1459,6 @@ var doc = `{
                 "creationDate": {
                     "type": "string"
                 },
-                "filepath": {
-                    "type": "string"
-                },
                 "lastMsgId": {
                     "type": "integer"
                 },
@@ -1474,7 +1466,7 @@ var doc = `{
                     "type": "string"
                 },
                 "properties": {
-                    "$ref": "#/definitions/stream.StreamProperties"
+                    "$ref": "#/definitions/types.StreamProperties"
                 },
                 "sizeInBytes": {
                     "type": "integer",
@@ -1483,6 +1475,46 @@ var doc = `{
                 "uuid": {
                     "type": "string",
                     "example": "4ce589e2-b483-467b-8b59-758b339801db"
+                }
+            }
+        },
+        "web.JSONResultListUsers": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "web.JSONResultPbkdf2": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "digest": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "iterations": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "success"
+                },
+                "salt": {
+                    "type": "string"
                 }
             }
         },

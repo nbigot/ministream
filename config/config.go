@@ -18,16 +18,24 @@ type User struct {
 }
 
 type Config struct {
+	Storage struct {
+		Type         string `yaml:"type"`
+		LogVerbosity int    `yaml:"logVerbosity"`
+		JSONFile     struct {
+			DataDirectory string     `yaml:"dataDirectory"`
+			LoggerConfig  zap.Config `yaml:"logger"`
+		}
+	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
 	AccountFile   string     `yaml:"-"`
-	StreamsFile   string     `yaml:"-"`
 	Streams       struct {
 		BulkFlushFrequency        int `yaml:"bulkFlushFrequency"`
 		BulkMaxSize               int `yaml:"bulkMaxSize"`
 		ChannelBufferSize         int `yaml:"channelBufferSize"`
 		MaxIteratorsPerStream     int `yaml:"maxAllowedIteratorsPerStream"`
 		MaxMessagePerGetOperation int `yaml:"maxMessagePerGetOperation"`
+		LogVerbosity              int `yaml:"logVerbosity"`
 	}
 	Auth struct {
 		Enable  bool   `yaml:"enable"`
@@ -115,29 +123,25 @@ var Configuration Config
 // example:
 // https://www.programmerall.com/article/67701658436/
 
-func LoadConfig(filename string) {
+func LoadConfig(filename string) error {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Printf("Error while opening configuration file %s\n", filename)
-		panic(err)
+		return fmt.Errorf("error while opening configuration file %s", filename)
 	}
 	defer file.Close()
 
 	content, err := ioutil.ReadAll(file)
 	if err != nil {
-		fmt.Printf("Error while loading configuration file %s\n", filename)
-		panic(err)
+		return fmt.Errorf("error while loading configuration file %s", filename)
 	}
 
 	err = yaml.Unmarshal(content, &Configuration)
 	if err != nil {
-		fmt.Printf("Error while parsing configuration file %s\n", filename)
-		panic(err)
+		return fmt.Errorf("error while parsing configuration file %s", filename)
 	}
 
 	Configuration.AccountFile = Configuration.DataDirectory + "account.json"
-	Configuration.StreamsFile = Configuration.DataDirectory + "streams.json"
 
 	if Configuration.RBAC.Filename == "" {
 		Configuration.RBAC.Filename = Configuration.DataDirectory + "rbac.json"
@@ -150,4 +154,6 @@ func LoadConfig(filename string) {
 		zap.String("method", "LoadConfig"),
 		zap.String("filename", filename),
 	)
+
+	return nil
 }

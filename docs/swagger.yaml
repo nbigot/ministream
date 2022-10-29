@@ -67,6 +67,19 @@ definitions:
       streamUUID:
         type: string
     type: object
+  stream.GetRecordsIteratorStatsResponse:
+    properties:
+      lastMessageRead:
+        type: integer
+      message:
+        type: string
+      status:
+        type: string
+      streamIteratorUUID:
+        type: string
+      streamUUID:
+        type: string
+    type: object
   stream.GetStreamRecordsResponse:
     properties:
       count:
@@ -122,21 +135,31 @@ definitions:
       streamUUID:
         type: string
     type: object
-  stream.Stream:
+  stream.RebuildStreamIndexResponse:
+    properties:
+      duration:
+        type: integer
+      indexStats: {}
+      message:
+        type: string
+      status:
+        type: string
+      streamUUID:
+        type: string
+    type: object
+  types.StreamInfo:
     properties:
       cptMessages:
         example: 12345
         type: integer
       creationDate:
         type: string
-      filepath:
-        type: string
       lastMsgId:
         type: integer
       lastUpdate:
         type: string
       properties:
-        $ref: '#/definitions/stream.StreamProperties'
+        $ref: '#/definitions/types.StreamProperties'
       sizeInBytes:
         example: 4567890
         type: integer
@@ -144,7 +167,7 @@ definitions:
         example: 4ce589e2-b483-467b-8b59-758b339801db
         type: string
     type: object
-  stream.StreamProperties:
+  types.StreamProperties:
     additionalProperties: true
     type: object
   web.GetAccountHTTPJsonResult:
@@ -193,19 +216,44 @@ definitions:
         type: integer
       creationDate:
         type: string
-      filepath:
-        type: string
       lastMsgId:
         type: integer
       lastUpdate:
         type: string
       properties:
-        $ref: '#/definitions/stream.StreamProperties'
+        $ref: '#/definitions/types.StreamProperties'
       sizeInBytes:
         example: 4567890
         type: integer
       uuid:
         example: 4ce589e2-b483-467b-8b59-758b339801db
+        type: string
+    type: object
+  web.JSONResultListUsers:
+    properties:
+      code:
+        example: 200
+        type: integer
+      users:
+        items:
+          type: string
+        type: array
+    type: object
+  web.JSONResultPbkdf2:
+    properties:
+      code:
+        example: 200
+        type: integer
+      digest:
+        type: string
+      hash:
+        type: string
+      iterations:
+        type: integer
+      message:
+        example: success
+        type: string
+      salt:
         type: string
     type: object
   web.JSONResultSuccess:
@@ -279,12 +327,12 @@ paths:
       summary: Reload server authentication configuration
       tags:
       - Admin
-  /api/v1//admin/server/stop:
+  /api/v1//admin/server/shutdown:
     post:
       consumes:
       - application/json
-      description: Stop server
-      operationId: server-stop
+      description: Shutdown server
+      operationId: server-shutdown
       produces:
       - application/json
       responses:
@@ -292,7 +340,7 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/web.JSONResultSuccess'
-      summary: Stop server
+      summary: Shutdown server
       tags:
       - Admin
   /api/v1/account:
@@ -369,7 +417,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            type: string
+            $ref: '#/definitions/web.JSONResultSuccess'
         "400":
           description: Bad Request
           schema:
@@ -479,7 +527,7 @@ paths:
           description: Created
           schema:
             items:
-              type: string
+              $ref: '#/definitions/types.StreamInfo'
             type: array
         "400":
           description: Bad Request
@@ -507,7 +555,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            type: string
+            $ref: '#/definitions/web.JSONResultSuccess'
         "400":
           description: Bad Request
           schema:
@@ -518,8 +566,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get the description for the given stream UUID
-      operationId: stream-get-description
+      description: Get information for the given stream UUID
+      operationId: stream-get-information
       parameters:
       - description: Stream UUID
         format: uuid.UUID
@@ -531,14 +579,14 @@ paths:
       - application/json
       responses:
         "200":
-          description: successful operation
+          description: OK
           schema:
-            $ref: '#/definitions/stream.Stream'
+            $ref: '#/definitions/types.StreamInfo'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/apierror.APIError'
-      summary: Get stream description
+      summary: Get stream information
       tags:
       - Stream
   /api/v1/stream/{streamuuid}/iterator:
@@ -662,7 +710,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            type: string
+            $ref: '#/definitions/stream.GetRecordsIteratorStatsResponse'
         "400":
           description: Bad Request
           schema:
@@ -693,7 +741,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            $ref: '#/definitions/stream.StreamProperties'
+            $ref: '#/definitions/types.StreamProperties'
         "400":
           description: Bad Request
           schema:
@@ -719,7 +767,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            $ref: '#/definitions/stream.StreamProperties'
+            $ref: '#/definitions/types.StreamProperties'
         "400":
           description: Bad Request
           schema:
@@ -745,39 +793,12 @@ paths:
         "200":
           description: successful operation
           schema:
-            $ref: '#/definitions/stream.StreamProperties'
+            $ref: '#/definitions/types.StreamProperties'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/apierror.APIError'
       summary: Set stream properties
-      tags:
-      - Stream
-  /api/v1/stream/{streamuuid}/raw:
-    get:
-      consumes:
-      - application/json
-      description: Get the raw file for the given stream UUID
-      operationId: stream-get-raw-file
-      parameters:
-      - description: Stream UUID
-        format: uuid.UUID
-        in: path
-        name: streamuuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            type: string
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apierror.APIError'
-      summary: Get stream raw file
       tags:
       - Stream
   /api/v1/stream/{streamuuid}/record:
@@ -859,9 +880,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: successful operation
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/stream.RebuildStreamIndexResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -972,7 +993,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            type: string
+            $ref: '#/definitions/web.JSONResultListUsers'
       summary: List users
       tags:
       - User
@@ -996,7 +1017,7 @@ paths:
         "200":
           description: successful operation
           schema:
-            type: string
+            $ref: '#/definitions/web.JSONResultPbkdf2'
         "400":
           description: Bad Request
           schema:

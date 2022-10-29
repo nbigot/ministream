@@ -6,7 +6,7 @@ import (
 	"ministream/constants"
 	"ministream/log"
 	"ministream/stream"
-	. "ministream/web/apierror"
+	"ministream/web/apierror"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -50,14 +50,14 @@ func GetAccount(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Account
 // @Param API-KEY header string true "API-KEY"
-// @Success 200 {object} stream.StreamUUID  "successful operation"
+// @success 200 {object} web.JSONResultSuccess{} "successful operation"
 // @Failure 400 {object} apierror.APIError
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/account/validate [get]
 func ValidateApiKey(c *fiber.Ctx) error {
 	if !config.Configuration.WebServer.JWT.Enable {
 		// JWT is not enabled in the configuration
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "JWT is not enabled on server",
 			Code:     constants.ErrorJWTNotEnabled,
@@ -78,7 +78,12 @@ func ValidateApiKey(c *fiber.Ctx) error {
 			zap.String("ipAddress", c.IP()),
 			zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
 		)
-		return c.JSON(fiber.Map{"status": "success", "valid": true})
+		return c.JSON(
+			JSONResultSuccess{
+				Code:    fiber.StatusOK,
+				Message: "success",
+			},
+		)
 	}
 
 	log.Logger.Info(
@@ -91,13 +96,13 @@ func ValidateApiKey(c *fiber.Ctx) error {
 	)
 
 	// wrong secret value or non existing header key/value
-	vErr := ValidationError{FailedField: constants.APIKEY, Tag: "header"}
-	httpError := APIError{
+	vErr := apierror.ValidationError{FailedField: constants.APIKEY, Tag: "header"}
+	httpError := apierror.APIError{
 		Message:          "invalid hash value",
 		Details:          "wrong secret value or non existing header key/value",
 		Code:             constants.ErrorInvalidParameterValue,
 		HttpCode:         fiber.StatusForbidden,
-		ValidationErrors: []*ValidationError{&vErr},
+		ValidationErrors: []*apierror.ValidationError{&vErr},
 	}
 	return httpError.HTTPResponse(c)
 }
@@ -117,7 +122,7 @@ func ValidateApiKey(c *fiber.Ctx) error {
 func LoginAccount(c *fiber.Ctx) error {
 	if !config.Configuration.WebServer.JWT.Enable {
 		// JWT is not enabled in the configuration
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "JWT is not enabled on server",
 			Code:     constants.ErrorJWTNotEnabled,
@@ -151,12 +156,12 @@ func LoginAccount(c *fiber.Ctx) error {
 			zap.String("ipAddresses", strings.Join(c.IPs(), ";")),
 			zap.String("userAgent", string(c.Context().UserAgent())),
 		)
-		vErr := ValidationError{FailedField: constants.APIKEY, Tag: "header"}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: constants.APIKEY, Tag: "header"}
+		httpError := apierror.APIError{
 			Message:          "wrong credentials",
 			Code:             constants.ErrorInvalidParameterValue,
 			HttpCode:         fiber.StatusForbidden,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 		}
 		return httpError.HTTPResponse(c)
 	}

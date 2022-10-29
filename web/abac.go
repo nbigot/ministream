@@ -9,7 +9,7 @@ func GetStreamPropertiesForABAC(c *fiber.Ctx) (interface{}, error) {
 	}
 	properties := map[string]interface{}{
 		"streamUUID": streamUuid.String(),
-		"properties": stream.Properties,
+		"properties": stream.GetInfo().Properties,
 	}
 	return properties, nil
 }

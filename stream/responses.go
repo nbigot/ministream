@@ -1,5 +1,9 @@
 package stream
 
+import (
+	. "ministream/types"
+)
+
 type GetStreamRecordsResponse struct {
 	Status             string             `json:"status"`
 	Duration           int64              `json:"duration"`
@@ -32,7 +36,6 @@ type GetRecordsIteratorStatsResponse struct {
 	StreamUUID         StreamUUID         `json:"streamUUID"`
 	StreamIteratorUUID StreamIteratorUUID `json:"streamIteratorUUID"`
 	LastMessageIdRead  MessageId          `json:"lastMessageRead"`
-	FileOffset         int64              `json:"fileOffset"`
 }
 
 type PutStreamRecordsResponse struct {
@@ -53,4 +56,12 @@ type LoginUserResponse struct {
 	Status  string `json:"status"`
 	Message string `json:"message"`
 	JWT     string `json:"jwt"`
+}
+
+type RebuildStreamIndexResponse struct {
+	Status     string      `json:"status"`
+	Message    string      `json:"message"`
+	StreamUUID StreamUUID  `json:"streamUUID"`
+	Duration   int64       `json:"duration"`
+	IndexStats interface{} `json:"indexStats"`
 }

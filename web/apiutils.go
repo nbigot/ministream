@@ -3,7 +3,7 @@ package web
 import (
 	"ministream/auth"
 	"ministream/constants"
-	. "ministream/web/apierror"
+	"ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -35,7 +35,7 @@ func Ping(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Utils
 // @Param payload body Pbkdf2Payload true "Pbkdf2Payload" Format(Pbkdf2Payload)
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @Success 200 {object} web.JSONResultPbkdf2 "successful operation"
 // @Failure 400 {object} apierror.APIError
 // @Router /api/v1/utils/pbkdf2 [post]
 func ApiServerUtilsPbkdf2(c *fiber.Ctx) error {
@@ -46,15 +46,24 @@ func ApiServerUtilsPbkdf2(c *fiber.Ctx) error {
 	}
 
 	if hash, err := auth.HashPassword(payload.Digest, payload.Iterations, payload.Salt, payload.Password); err == nil {
-		return c.JSON(fiber.Map{"status": "success", "hash": hash, "digest": payload.Digest, "iterations": payload.Iterations, "salt": payload.Salt})
+		return c.JSON(
+			JSONResultPbkdf2{
+				Code:       200,
+				Message:    "success",
+				Hash:       hash,
+				Digest:     payload.Digest,
+				Iterations: payload.Iterations,
+				Salt:       payload.Salt,
+			},
+		)
 	} else {
-		vErr := ValidationError{FailedField: "hash", Tag: "parameter", Value: hash}
-		httpError := APIError{
+		vErr := apierror.ValidationError{FailedField: "hash", Tag: "parameter", Value: hash}
+		httpError := apierror.APIError{
 			Message:          "invalid hash value",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidParameterValue,
 			HttpCode:         fiber.StatusBadRequest,
-			ValidationErrors: []*ValidationError{&vErr},
+			ValidationErrors: []*apierror.ValidationError{&vErr},
 			Err:              err,
 		}
 		return httpError.HTTPResponse(c)

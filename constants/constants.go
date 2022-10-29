@@ -13,8 +13,9 @@ const ErrorCantDeserializeJson = 1007
 
 const ErrorCantPutMessageIntoStream = 1010
 const ErrorCantPutMessagesIntoStream = 1011
-const ErrorInvalidCreateRecordsIteratorRequest = 1011
 const ErrorCantDeserializeJsonRecords = 1012
+const ErrorInvalidCreateRecordsIteratorRequest = 1013
+const ErrorCantCreateRecordsIterator = 1014
 
 const ErrorCantGetMessagesFromStream = 1020
 

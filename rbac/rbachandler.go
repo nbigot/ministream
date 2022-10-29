@@ -106,9 +106,13 @@ func NewRBACHandler(cfg *RBACHandlerConfig) fiber.Handler {
 			return c.Next()
 		}
 
-		roles := c.Locals(cfg.RolesContextKey).([]*Role)
-		if roles == nil {
+		iRoles := c.Locals(cfg.RolesContextKey)
+		if iRoles == nil {
 			return cfg.ErrorHandler(c, errors.New("role key not found in locals"))
+		}
+		roles := iRoles.([]*Role)
+		if roles == nil {
+			return cfg.ErrorHandler(c, errors.New("roles are empty"))
 		}
 
 		user := c.Locals(cfg.UserContextKey).(string)

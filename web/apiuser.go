@@ -7,7 +7,7 @@ import (
 	"ministream/log"
 	"ministream/rbac"
 	"ministream/stream"
-	. "ministream/web/apierror"
+	"ministream/web/apierror"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,10 +21,10 @@ import (
 // @Accept json
 // @Produce json
 // @Tags User
-// @Success 200 {object} stream.StreamUUID "successful operation"
+// @Success 200 {object} web.JSONResultListUsers "successful operation"
 // @Router /api/v1/users [get]
 func ListUsers(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{"status": "success", "users": rbac.RbacMgr.Rbac.GetUserList()})
+	return c.JSON(JSONResultListUsers{Code: fiber.StatusOK, Users: rbac.RbacMgr.Rbac.GetUserList()})
 }
 
 // LoginUser godoc
@@ -43,7 +43,7 @@ func ListUsers(c *fiber.Ctx) error {
 // @Router /api/v1/user/login [get]
 func LoginUser(c *fiber.Ctx) error {
 	if !config.Configuration.WebServer.JWT.Enable {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "JWT is not enabled on server",
 			Code:     constants.ErrorJWTNotEnabled,
@@ -53,7 +53,7 @@ func LoginUser(c *fiber.Ctx) error {
 	}
 
 	if !config.Configuration.RBAC.Enable {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "RBAC is not enabled on server",
 			Code:     constants.ErrorJWTNotEnabled,
@@ -80,7 +80,7 @@ func LoginUser(c *fiber.Ctx) error {
 			zap.String("jti", (*claims)["jti"].(string)),
 			zap.Error(err),
 		)
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "authenticate user error",
 			Code:     constants.ErrorAuthInternalError,
 			HttpCode: fiber.StatusInternalServerError,
@@ -102,7 +102,7 @@ func LoginUser(c *fiber.Ctx) error {
 			zap.String("jti", (*claims)["jti"].(string)),
 			zap.Error(err),
 		)
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "wrong credentials",
 			Code:     constants.ErrorWrongCredentials,
 			HttpCode: fiber.StatusForbidden,

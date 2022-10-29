@@ -6,8 +6,11 @@ import (
 	"ministream/auth"
 	"ministream/config"
 	"ministream/log"
+	"ministream/service"
+	"ministream/startup"
 	"ministream/stream"
 	"ministream/web"
+	"os"
 )
 
 func argparse() {
@@ -27,13 +30,21 @@ func main() {
 	// 127.0.0.1:443
 	argparse()
 	fmt.Println("Start")
-	config.LoadConfig(config.ConfigFile)
-	if err := auth.AuthMgr.Initialize(&config.Configuration); err != nil {
-		panic(err)
+	if err := config.LoadConfig(config.ConfigFile); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
-	stream.GoServer()
-	stream.CronJobStreamsSaver.Start()
+	if err := startup.Start(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if err := auth.AuthMgr.Initialize(&config.Configuration); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	stream.LoadServerAuthConfig()
+	service.NewGlobalService()
 	web.GoServer()
-	stream.CronJobStreamsSaver.Stop()
+	service.Stop()
 	log.Logger.Info("End program")
 }

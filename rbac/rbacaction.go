@@ -11,22 +11,20 @@ const ActionGetStreamDescription = "GetStreamDescription"
 const ActionGetStreamProperties = "GetStreamProperties"
 const ActionSetStreamProperties = "SetStreamProperties"
 const ActionUpdateStreamProperties = "UpdateStreamProperties"
-const ActionGetStreamRawFile = "GetStreamRawFile"
 const ActionCreateStream = "CreateStream"
 const ActionDeleteStream = "DeleteStream"
 const ActionCloseRecordsIterator = "CloseRecordsIterator"
 const ActionRebuildIndex = "RebuildIndex"
 const ActionListUsers = "ListUsers"
-const ActionValidateApiKey = "ValidateApiKey"
 const ActionGetAccount = "GetAccount"
-const ActionStopServer = "StopServer"
+const ActionShutdownServer = "ShutdownServer"
 const ActionReloadServerAuth = "ReloadServerAuth"
 const ActionJWTRevokeAll = "ActionJWTRevokeAll"
 
 var ActionList = []string{
 	ActionGetRecords, ActionCreateRecordsIterator, ActionPutRecords, ActionPutRecord, ActionGetRecordsIteratorStats,
 	ActionListStreams, ActionListStreamsProperties, ActionGetStreamDescription, ActionGetStreamProperties,
-	ActionSetStreamProperties, ActionUpdateStreamProperties, ActionGetStreamRawFile, ActionCreateStream, ActionDeleteStream,
+	ActionSetStreamProperties, ActionUpdateStreamProperties, ActionCreateStream, ActionDeleteStream,
 	ActionCloseRecordsIterator, ActionRebuildIndex, ActionListUsers,
-	ActionValidateApiKey, ActionGetAccount, ActionStopServer, ActionReloadServerAuth, ActionJWTRevokeAll,
+	ActionGetAccount, ActionShutdownServer, ActionReloadServerAuth, ActionJWTRevokeAll,
 }
