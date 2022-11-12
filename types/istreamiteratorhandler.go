@@ -15,5 +15,5 @@ type IStreamIteratorHandler interface {
 	Close() error
 	Seek(request *StreamIteratorRequest) error
 	SaveSeek() error
-	GetNextRecord() (interface{}, bool, bool, error)
+	GetNextRecord() (MessageId, interface{}, bool, bool, error)
 }

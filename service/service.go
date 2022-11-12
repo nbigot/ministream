@@ -42,6 +42,10 @@ func (svc *Service) startStream(info *StreamInfo) (*Stream, error) {
 	if err = writer.Init(); err != nil {
 		return nil, err
 	}
+	if err = writer.Open(); err != nil {
+		return nil, err
+	}
+
 	ingestBuffer := buffering.NewStreamIngestBuffer(
 		time.Duration(config.Configuration.Streams.BulkFlushFrequency)*time.Second,
 		config.Configuration.Streams.BulkMaxSize,

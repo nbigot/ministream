@@ -11,6 +11,7 @@ type GetStreamRecordsResponse struct {
 	CountErrors        int64              `json:"countErrors"`
 	CountSkipped       int64              `json:"countSkipped"`
 	Remain             bool               `json:"remain"`
+	LastRecordIdRead   MessageId          `json:"lastRecordIdRead"`
 	StreamUUID         StreamUUID         `json:"streamUUID"`
 	StreamIteratorUUID StreamIteratorUUID `json:"streamIteratorUUID"`
 	Records            []interface{}      `json:"records"`
@@ -35,7 +36,8 @@ type GetRecordsIteratorStatsResponse struct {
 	Message            string             `json:"message"`
 	StreamUUID         StreamUUID         `json:"streamUUID"`
 	StreamIteratorUUID StreamIteratorUUID `json:"streamIteratorUUID"`
-	LastMessageIdRead  MessageId          `json:"lastMessageRead"`
+	LastRecordIdRead   MessageId          `json:"lastRecordIdRead"`
+	Name               string             `json:"name"`
 }
 
 type PutStreamRecordsResponse struct {

@@ -19,23 +19,27 @@ type User struct {
 
 type Config struct {
 	Storage struct {
-		Type         string `yaml:"type"`
-		LogVerbosity int    `yaml:"logVerbosity"`
+		Type         string     `yaml:"type"`
+		LoggerConfig zap.Config `yaml:"logger"`
+		LogVerbosity int        `yaml:"logVerbosity"`
 		JSONFile     struct {
-			DataDirectory string     `yaml:"dataDirectory"`
-			LoggerConfig  zap.Config `yaml:"logger"`
-		}
+			DataDirectory string `yaml:"dataDirectory"`
+		} `yaml:"jsonfile"`
+		InMemory struct {
+			MaxRecordsByStream uint64 `yaml:"maxRecordsByStream"`
+			MaxSize            string `yaml:"maxSize"`
+		} `yaml:"inmemory"`
 	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
 	AccountFile   string     `yaml:"-"`
 	Streams       struct {
-		BulkFlushFrequency        int `yaml:"bulkFlushFrequency"`
-		BulkMaxSize               int `yaml:"bulkMaxSize"`
-		ChannelBufferSize         int `yaml:"channelBufferSize"`
-		MaxIteratorsPerStream     int `yaml:"maxAllowedIteratorsPerStream"`
-		MaxMessagePerGetOperation int `yaml:"maxMessagePerGetOperation"`
-		LogVerbosity              int `yaml:"logVerbosity"`
+		BulkFlushFrequency        int  `yaml:"bulkFlushFrequency"`
+		BulkMaxSize               int  `yaml:"bulkMaxSize"`
+		ChannelBufferSize         int  `yaml:"channelBufferSize"`
+		MaxIteratorsPerStream     int  `yaml:"maxAllowedIteratorsPerStream"`
+		MaxMessagePerGetOperation uint `yaml:"maxMessagePerGetOperation"`
+		LogVerbosity              int  `yaml:"logVerbosity"`
 	}
 	Auth struct {
 		Enable  bool   `yaml:"enable"`

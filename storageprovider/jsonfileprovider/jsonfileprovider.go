@@ -21,9 +21,9 @@ type FileStorage struct {
 	// implements IStorageProvider interface
 	logger        *zap.Logger
 	logVerbosity  int
-	dataDirectory string // root directory to store all data and streams
-	catalog       *StreamCatalogFile
+	catalog       storageprovider.IStorageCatalog
 	mu            sync.Mutex
+	dataDirectory string // root directory to store all data and streams
 }
 
 type streamListSerializeStruct struct {
@@ -55,7 +55,7 @@ func (s *FileStorage) Init() error {
 }
 
 func (s *FileStorage) Stop() error {
-	return nil
+	return s.catalog.Stop()
 }
 
 func (s *FileStorage) GenerateNewStreamUuid() types.StreamUUID {
@@ -209,12 +209,6 @@ func (s *FileStorage) NewStreamWriter(info *types.StreamInfo) (buffering.IStream
 	fileIndexPath := s.GetStreamIndexFilePath(info.UUID)
 	fileMetaInfoPath := s.GetMetaDataFilePath(info.UUID)
 	w := NewStreamWriterFile(info, fileDataPath, fileIndexPath, fileMetaInfoPath, s.logger, s.logVerbosity)
-	if err := w.Init(); err != nil {
-		return w, err
-	}
-	if err := w.Open(); err != nil {
-		return w, err
-	}
 	return w, nil
 }
 

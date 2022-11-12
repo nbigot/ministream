@@ -4,7 +4,7 @@ const ActionGetRecords = "GetRecords"
 const ActionCreateRecordsIterator = "CreateRecordsIterator"
 const ActionPutRecords = "PutRecords"
 const ActionPutRecord = "PutRecord"
-const ActionGetRecordsIteratorStats = "ActionGetRecordsIteratorStats"
+const ActionGetRecordsIteratorStats = "GetRecordsIteratorStats"
 const ActionListStreams = "ListStreams"
 const ActionListStreamsProperties = "ListStreamsProperties"
 const ActionGetStreamDescription = "GetStreamDescription"
@@ -19,7 +19,7 @@ const ActionListUsers = "ListUsers"
 const ActionGetAccount = "GetAccount"
 const ActionShutdownServer = "ShutdownServer"
 const ActionReloadServerAuth = "ReloadServerAuth"
-const ActionJWTRevokeAll = "ActionJWTRevokeAll"
+const ActionJWTRevokeAll = "JWTRevokeAll"
 
 var ActionList = []string{
 	ActionGetRecords, ActionCreateRecordsIterator, ActionPutRecords, ActionPutRecord, ActionGetRecordsIteratorStats,

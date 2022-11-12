@@ -15,16 +15,17 @@ const EOLChar = '\n'
 
 type StreamIteratorHandlerFile struct {
 	// implements IStreamIteratorHandler interface
-	streamUUID  types.StreamUUID
-	itUUID      types.StreamIteratorUUID
-	initialized bool
-	file        *os.File
-	filename    string
-	FileOffset  int64
-	bytesRead   int64
-	index       *StreamIndexFile
-	reader      *bufio.Reader
-	logger      *zap.Logger
+	streamUUID       types.StreamUUID
+	itUUID           types.StreamIteratorUUID
+	initialized      bool
+	file             *os.File
+	filename         string
+	FileOffset       int64
+	bytesRead        int64
+	nextRecordIdRead types.MessageId
+	index            *StreamIndexFile
+	reader           *bufio.Reader
+	logger           *zap.Logger
 }
 
 func (h *StreamIteratorHandlerFile) Open() error {
@@ -62,7 +63,10 @@ func (h *StreamIteratorHandlerFile) Close() error {
 }
 
 func (h *StreamIteratorHandlerFile) Seek(request *types.StreamIteratorRequest) error {
-	var err error
+	var (
+		err                error
+		nextRecordIdToRead types.MessageId
+	)
 	if h.initialized {
 		_, err = h.file.Seek(h.FileOffset, io.SeekStart)
 		return err
@@ -70,19 +74,20 @@ func (h *StreamIteratorHandlerFile) Seek(request *types.StreamIteratorRequest) e
 
 	switch request.IteratorType {
 	case "FIRST_MESSAGE":
-		h.FileOffset, err = h.index.GetOffsetFirstMessage()
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetFirstMessage()
 	case "LAST_MESSAGE":
-		h.FileOffset, err = h.index.GetOffsetLastMessage()
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetLastMessage()
 	case "AFTER_LAST_MESSAGE":
-		h.FileOffset, err = h.index.GetOffsetAfterLastMessage()
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetAfterLastMessage()
 	case "AT_MESSAGE_ID":
-		h.FileOffset, err = h.index.GetOffsetAtMessageId(request.MessageId)
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetAtMessageId(request.MessageId)
 	case "AFTER_MESSAGE_ID":
-		h.FileOffset, err = h.index.GetOffsetAfterMessageId(request.MessageId)
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetAfterMessageId(request.MessageId)
 	case "AT_TIMESTAMP":
-		h.FileOffset, err = h.index.GetOffsetAtTimestamp(&request.Timestamp)
+		nextRecordIdToRead, h.FileOffset, err = h.index.GetOffsetAtTimestamp(&request.Timestamp)
 	default:
 		h.FileOffset = 0
+		nextRecordIdToRead = 0
 		err = errors.New("invalid iterator type")
 	}
 
@@ -93,6 +98,7 @@ func (h *StreamIteratorHandlerFile) Seek(request *types.StreamIteratorRequest) e
 		h.initialized = true
 		h.reader = bufio.NewReaderSize(h.file, 1024*1024)
 		h.reader.Reset(h.file)
+		h.nextRecordIdRead = nextRecordIdToRead
 	}
 
 	return err
@@ -104,7 +110,7 @@ func (h *StreamIteratorHandlerFile) SaveSeek() error {
 	return err
 }
 
-func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, error) {
+func (h *StreamIteratorHandlerFile) GetNextRecord() (types.MessageId, interface{}, bool, bool, error) {
 	line, errRead := h.reader.ReadString(EOLChar)
 	if errRead != nil {
 		// err is often io.EOF (end of file reached)
@@ -112,12 +118,12 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, er
 		errSeek := h.SaveSeek()
 		if errSeek != nil {
 			// result is: (no record, no record found, cannot continue, error)
-			return nil, false, false, errSeek
+			return 0, nil, false, false, errSeek
 		}
 
 		if errRead == io.EOF {
 			// result is: (no record, no record found, cannot continue, no error)
-			return nil, false, false, nil
+			return 0, nil, false, false, nil
 		} else {
 			h.logger.Error(
 				"cannot read record line",
@@ -129,11 +135,13 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, er
 				zap.Error(errRead),
 			)
 			// result is: (no record, no record found (or cannot read it), cannot continue, error)
-			return nil, true, false, errRead
+			return 0, nil, true, false, errRead
 		}
 	}
 
 	h.bytesRead += int64(len(line))
+	lastRecordIdRead := h.nextRecordIdRead
+	h.nextRecordIdRead++
 
 	var message interface{}
 	if errUnmarshal := json.Unmarshal([]byte(line), &message); errUnmarshal != nil {
@@ -147,24 +155,25 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (interface{}, bool, bool, er
 			zap.Error(errUnmarshal),
 		)
 		// result is: (no record, record found, may continue, error)
-		return nil, true, true, errUnmarshal
+		return lastRecordIdRead, nil, true, true, errUnmarshal
 	}
 
 	// result is: (valid record, record found, may continue, no error)
-	return message, true, true, nil
+	return lastRecordIdRead, message, true, true, nil
 }
 
 func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, filename string, logger *zap.Logger) *StreamIteratorHandlerFile {
 	return &StreamIteratorHandlerFile{
-		streamUUID:  streamUUID,
-		itUUID:      iteratorUUID,
-		initialized: false,
-		file:        nil,
-		filename:    filename,
-		FileOffset:  0,
-		bytesRead:   0,
-		index:       nil,
-		reader:      nil,
-		logger:      logger,
+		streamUUID:       streamUUID,
+		itUUID:           iteratorUUID,
+		initialized:      false,
+		file:             nil,
+		filename:         filename,
+		FileOffset:       0,
+		bytesRead:        0,
+		nextRecordIdRead: 0,
+		index:            nil,
+		reader:           nil,
+		logger:           logger,
 	}
 }

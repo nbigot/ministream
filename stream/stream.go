@@ -2,6 +2,7 @@ package stream
 
 import (
 	"errors"
+	"fmt"
 	"ministream/buffering"
 	"ministream/config"
 	. "ministream/types"
@@ -151,13 +152,13 @@ func (s *Stream) CloseIterator(iterUUID StreamIteratorUUID) error {
 
 func (s *Stream) GetIterator(iterUUID StreamIteratorUUID) (*StreamIterator, error) {
 	if it, found := s.iterators[iterUUID]; !found {
-		return nil, errors.New("iterator not found")
+		return nil, fmt.Errorf("iterator not found: %s", iterUUID.String())
 	} else {
 		return it, nil
 	}
 }
 
-func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID StreamIteratorUUID, maxRecords int) (*GetStreamRecordsResponse, error) {
+func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID StreamIteratorUUID, maxRecords uint) (*GetStreamRecordsResponse, error) {
 	if s.state != STREAM_STATE_RUNNING {
 		return nil, errors.New("stream state is not running")
 	}
