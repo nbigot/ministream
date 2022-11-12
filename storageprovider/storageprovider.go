@@ -27,7 +27,7 @@ func NewStorageProvider(logger *zap.Logger, conf *config.Config) (IStorageProvid
 	if factory, err := GetFactory(conf.Storage.Type); err != nil {
 		return nil, err
 	} else {
-		spLogger, err := NewLogger(&conf.Storage.JSONFile.LoggerConfig)
+		spLogger, err := NewLogger(&conf.Storage.LoggerConfig)
 		if err != nil {
 			return nil, err
 		}

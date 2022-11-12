@@ -3,6 +3,8 @@ package web
 import (
 	"bufio"
 	"bytes"
+	"errors"
+	"fmt"
 	"ministream/account"
 	"ministream/config"
 	"ministream/constants"
@@ -361,20 +363,24 @@ func CreateRecordsIterator(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Param iteratoruuid path string true "Iterator UUID" Format(uuid.UUID)
+// @Param streamiteratoruuid path string true "Stream iterator UUID" Format(uuid.UUID)
 // @Success 200 {object} stream.GetRecordsIteratorStatsResponse "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
-// @Router /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/stats [get]
+// @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/stats [get]
 func GetRecordsIteratorStats(c *fiber.Ctx) error {
 	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	streamIteratorUuid, err := uuid.Parse(c.Params("streamiteratoruuid"))
+	streamIteratorUuid, err := uuid.Parse(c.Params(constants.ParamNameStreamIteratorUuid))
 	if err != nil {
-		vErr := apierror.ValidationError{FailedField: "streamiteratoruuid", Tag: "parameter", Value: c.Params("streamiteratoruuid")}
+		vErr := apierror.ValidationError{
+			FailedField: constants.ParamNameStreamIteratorUuid,
+			Tag:         "parameter",
+			Value:       c.Params(constants.ParamNameStreamIteratorUuid),
+		}
 		httpError := apierror.APIError{
 			Message:          "invalid stream iterator uuid",
 			Details:          err.Error(),
@@ -389,10 +395,11 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 	var it *stream.StreamIterator
 	if it, err = streamPtr.GetIterator(streamIteratorUuid); err != nil {
 		httpError := apierror.APIError{
-			Message:  "iterator not found",
-			Details:  err.Error(),
-			Code:     constants.ErrorStreamIteratorNotFound,
-			HttpCode: fiber.StatusBadRequest,
+			StreamUUID: streamUUID,
+			Message:    "iterator not found",
+			Details:    err.Error(),
+			Code:       constants.ErrorStreamIteratorNotFound,
+			HttpCode:   fiber.StatusBadRequest,
 		}
 		return httpError.HTTPResponse(c)
 	}
@@ -402,7 +409,8 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 		Message:            "",
 		StreamUUID:         streamUUID,
 		StreamIteratorUUID: streamIteratorUuid,
-		LastMessageIdRead:  it.LastMessageIdRead,
+		LastRecordIdRead:   it.LastRecordIdRead,
+		Name:               it.GetName(),
 	}
 	return c.JSON(response)
 }
@@ -415,20 +423,25 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
+// @Param streamiteratoruuid path string true "Stream iterator UUID" Format(uuid.UUID)
 // @Success 200 {object} stream.CloseRecordsIteratorResponse "successful operation"
 // @Success 400 {object} apierror.APIError
-// @Router /api/v1/stream/{streamuuid}/iterator [delete]
+// @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid} [delete]
 func CloseRecordsIterator(c *fiber.Ctx) error {
-	streamUuid, streamPtr, apiErr := GetStreamFromParameter(c)
+	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	paramNameIteratoruuid := "iteratoruuid"
-	streamIteratorUuid, err2 := uuid.Parse(c.Params(paramNameIteratoruuid))
+	streamIteratorUuid, err2 := uuid.Parse(c.Params(constants.ParamNameStreamIteratorUuid))
 	if err2 != nil {
-		vErr := apierror.ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
+		vErr := apierror.ValidationError{
+			FailedField: constants.ParamNameStreamIteratorUuid,
+			Tag:         "parameter",
+			Value:       c.Params(constants.ParamNameStreamIteratorUuid),
+		}
 		httpError := apierror.APIError{
+			StreamUUID:       streamUUID,
 			Message:          "invalid stream iterator uuid",
 			Details:          err2.Error(),
 			Code:             constants.ErrorInvalidStreamUuid,
@@ -440,8 +453,13 @@ func CloseRecordsIterator(c *fiber.Ctx) error {
 	}
 
 	if err3 := streamPtr.CloseIterator(streamIteratorUuid); err3 != nil {
-		vErr := apierror.ValidationError{FailedField: paramNameIteratoruuid, Tag: "parameter", Value: c.Params(paramNameIteratoruuid)}
+		vErr := apierror.ValidationError{
+			FailedField: constants.ParamNameStreamIteratorUuid,
+			Tag:         "parameter",
+			Value:       c.Params(constants.ParamNameStreamIteratorUuid),
+		}
 		httpError := apierror.APIError{
+			StreamUUID:       streamUUID,
 			Message:          "cannot close stream iterator uuid",
 			Details:          err3.Error(),
 			Code:             constants.ErrorCantCloseStreamIterator,
@@ -455,7 +473,7 @@ func CloseRecordsIterator(c *fiber.Ctx) error {
 	response := stream.CloseRecordsIteratorResponse{
 		Status:             "success",
 		Message:            "Stream iterator closed",
-		StreamUUID:         streamUuid,
+		StreamUUID:         streamUUID,
 		StreamIteratorUUID: streamIteratorUuid,
 	}
 	return c.JSON(response)
@@ -469,22 +487,27 @@ func CloseRecordsIterator(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Stream
 // @Param streamuuid path string true "Stream UUID" Format(uuid.UUID)
-// @Param iteratoruuid path string true "Iterator UUID" Format(uuid.UUID)
+// @Param streamiteratoruuid path string true "Stream iterator UUID" Format(uuid.UUID)
 // @Param maxRecords query int false "int max records" example(10)
 // @Success 200 {object} stream.GetStreamRecordsResponse "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
-// @Router /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/records [get]
+// @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/records [get]
 func GetRecords(c *fiber.Ctx) error {
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	iteratorUuid, err := uuid.Parse(c.Params("iteratoruuid"))
+	iteratorUuid, err := uuid.Parse(c.Params(constants.ParamNameStreamIteratorUuid))
 	if err != nil {
-		vErr := apierror.ValidationError{FailedField: "iteratoruuid", Tag: "parameter", Value: c.Params("iteratoruuid")}
+		vErr := apierror.ValidationError{
+			FailedField: constants.ParamNameStreamIteratorUuid,
+			Tag:         "parameter",
+			Value:       c.Params(constants.ParamNameStreamIteratorUuid),
+		}
 		httpError := apierror.APIError{
+			StreamUUID:       streamUUID,
 			Message:          "invalid iterator uuid",
 			Details:          err.Error(),
 			Code:             constants.ErrorInvalidIteratorUuid,
@@ -495,13 +518,23 @@ func GetRecords(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	var maxRecords int = config.Configuration.Streams.MaxMessagePerGetOperation
+	var maxRecords uint = config.Configuration.Streams.MaxMessagePerGetOperation
 	strMaxRecords := c.Query("maxRecords")
 	if strMaxRecords != "" {
-		maxRecords, err = strconv.Atoi(strMaxRecords)
+		var maxRecordsRequested uint64
+		maxRecordsRequested, err = strconv.ParseUint(strMaxRecords, 10, 0)
+		if err == nil {
+			switch v := maxRecordsRequested; {
+			case v == 0:
+				err = errors.New("value must be positive")
+			case v > uint64(maxRecords):
+				err = fmt.Errorf("value must cannot exceed limit %d", maxRecords)
+			}
+		}
 		if err != nil {
 			vErr := apierror.ValidationError{FailedField: "maxRecords", Tag: "parameter", Value: strMaxRecords}
 			httpError := apierror.APIError{
+				StreamUUID:       streamUUID,
 				Message:          "invalid integer value",
 				Details:          err.Error(),
 				Code:             constants.ErrorInvalidParameterValue,
@@ -511,19 +544,18 @@ func GetRecords(c *fiber.Ctx) error {
 			}
 			return httpError.HTTPResponse(c)
 		}
-		if maxRecords > config.Configuration.Streams.MaxMessagePerGetOperation {
-			maxRecords = config.Configuration.Streams.MaxMessagePerGetOperation
-		}
+		maxRecords = uint(maxRecordsRequested)
 	}
 
 	response, err2 := streamPtr.GetRecords(c.Context(), iteratorUuid, maxRecords)
 	if err2 != nil {
 		httpError := apierror.APIError{
-			Message:  "cannot get records",
-			Details:  err2.Error(),
-			Code:     constants.ErrorCantGetMessagesFromStream,
-			HttpCode: fiber.StatusInternalServerError,
-			Err:      err2,
+			StreamUUID: streamUUID,
+			Message:    "cannot get records",
+			Details:    err2.Error(),
+			Code:       constants.ErrorCantGetMessagesFromStream,
+			HttpCode:   fiber.StatusInternalServerError,
+			Err:        err2,
 		}
 		return httpError.HTTPResponse(c)
 	}

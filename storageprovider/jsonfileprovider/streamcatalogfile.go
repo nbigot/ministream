@@ -12,6 +12,7 @@ import (
 )
 
 type StreamCatalogFile struct {
+	// implements IStorageCatalog interface
 	logger                *zap.Logger
 	streamCatalogFilepath string
 	mu                    sync.Mutex
@@ -19,6 +20,10 @@ type StreamCatalogFile struct {
 
 func (s *StreamCatalogFile) Init() error {
 	return s.EnsureCatalogFileExists()
+}
+
+func (s *StreamCatalogFile) Stop() error {
+	return nil
 }
 
 func (s *StreamCatalogFile) EnsureCatalogFileExists() error {

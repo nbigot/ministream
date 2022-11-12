@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"errors"
+	"ministream/types"
 	. "ministream/types"
 	"time"
 
@@ -26,14 +27,14 @@ type StreamIteratorStats struct {
 }
 
 type StreamIterator struct {
-	streamUUID        StreamUUID
-	itUUID            StreamIteratorUUID
-	request           *StreamIteratorRequest
-	jqFilter          *gojq.Query
-	LastMessageIdRead MessageId
-	Stats             StreamIteratorStats
-	handler           IStreamIteratorHandler
-	logger            *zap.Logger
+	streamUUID       StreamUUID
+	itUUID           StreamIteratorUUID
+	request          *StreamIteratorRequest
+	jqFilter         *gojq.Query
+	LastRecordIdRead MessageId
+	Stats            StreamIteratorStats
+	handler          IStreamIteratorHandler
+	logger           *zap.Logger
 	// TODO: add timeout (self delete at timeout)
 }
 
@@ -41,6 +42,14 @@ var rs = jsonschema.Schema{}
 
 func (it *StreamIterator) GetUUID() StreamIteratorUUID {
 	return it.itUUID
+}
+
+func (it *StreamIterator) GetName() string {
+	if it.request != nil {
+		return it.request.Name
+	} else {
+		return ""
+	}
 }
 
 func (it *StreamIterator) Open() error {
@@ -61,7 +70,7 @@ func (it *StreamIterator) SaveSeek() error {
 	return it.handler.SaveSeek()
 }
 
-func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*GetStreamRecordsResponse, error) {
+func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*GetStreamRecordsResponse, error) {
 	var err error
 	startTime := time.Now()
 
@@ -71,6 +80,7 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*G
 		Count:              0,
 		CountErrors:        0,
 		CountSkipped:       0,
+		LastRecordIdRead:   0,
 		Remain:             false,
 		StreamUUID:         it.streamUUID,
 		StreamIteratorUUID: it.itUUID,
@@ -88,18 +98,24 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*G
 
 	it.Stats.LastTimeRead = time.Now()
 
-	var record interface{}
-	var foundRecord bool
-	var canContinue bool
+	var (
+		record                interface{}
+		recordId              types.MessageId
+		lastRecordIdProcessed types.MessageId
+		foundRecord           bool
+		canContinue           bool
+	)
 
 	for {
-		record, foundRecord, canContinue, err = it.handler.GetNextRecord()
+		recordId, record, foundRecord, canContinue, err = it.handler.GetNextRecord()
 
 		if !foundRecord {
 			// no record found, this is the end of the stream
-			response.Status = "success"
-			return &response, nil
+			err = nil
+			break
 		}
+
+		lastRecordIdProcessed = recordId
 
 		if err != nil {
 			response.CountErrors += 1
@@ -107,8 +123,7 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*G
 				continue
 			} else {
 				// non recoverable error, cannot simply skip this record
-				response.Status = "error"
-				return nil, err
+				break
 			}
 		}
 
@@ -153,16 +168,31 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords int) (*G
 			}
 		}
 
-		if len(response.Records) >= maxRecords {
+		if uint(len(response.Records)) >= maxRecords {
+			// reach the maximum allowed records count by response
 			response.Remain = true
+			err = nil
 			break
 		}
 	}
 
+	if err != nil {
+		response.Status = "error"
+		return &response, err
+	}
+
+	it.LastRecordIdRead = lastRecordIdProcessed
 	it.Stats.RecordsErrors += response.CountErrors
 	it.Stats.RecordsSkipped += response.CountSkipped
 	it.Stats.RecordsSent += response.Count
-	it.SaveSeek()
+
+	response.LastRecordIdRead = lastRecordIdProcessed
+
+	if err = it.SaveSeek(); err != nil {
+		response.Status = "error"
+		return &response, err
+	}
+
 	response.Status = "success"
 	return &response, nil
 }

@@ -59,3 +59,7 @@ const AuthHashMethodMD5 = 1    // MD5
 const AuthHashMethodSHA256 = 2 // SHA256
 const AuthHashMethodSHA512 = 3 // SHA512
 const AuthHashMethodSHA1 = 4   // SHA1
+
+// Http params
+
+const ParamNameStreamIteratorUuid = "streamiteratoruuid"

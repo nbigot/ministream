@@ -202,53 +202,53 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 	return &stats, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetFirstMessage() (MsgOffset, error) {
-	return 0, nil
+func (idx *StreamIndexFile) GetOffsetFirstMessage() (MessageId, MsgOffset, error) {
+	return 0, 0, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetLastMessage() (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetLastMessage() (MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return row.Offset, nil
+	return row.Id, row.Offset, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return row.Offset + row.LengthInBytes, nil
+	return row.Id + 1, row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId MessageId) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId MessageId) (MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return row.Offset, nil
+	return row.Id, row.Offset, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId MessageId) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId MessageId) (MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return row.Offset + row.LengthInBytes, nil
+	return row.Id + 1, row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAtTimestamp(timestamp *time.Time) (MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtTimestamp(timestamp *time.Time) (MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(nil, timestamp)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
-	return row.Offset, nil
+	return row.Id, row.Offset, nil
 }
 
 func (idx *StreamIndexFile) getOffsetMessage(seekOffset int64, seekWhence int) (*streamIndexRowMsg, error) {
@@ -405,7 +405,7 @@ func (idx *StreamIndexFile) searchTimestamp(timestampUnixNano int64, lastIndexRa
 		return err
 	}
 	if row.TimestampUnixNano >= timestampUnixNano {
-		// found a message that was created after th given timestamp
+		// found a message that was created after the given timestamp
 		return nil
 	}
 
