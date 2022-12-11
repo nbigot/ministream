@@ -6,6 +6,7 @@ Run:
 
 		$ ./build-doc-swagger.bat
 or
+
 		$ swag init
 
 Then:
