@@ -316,13 +316,12 @@ func (svc *Service) Stop() {
 
 func (svc *Service) setStreamMap(streamUUID StreamUUID, s *Stream) {
 	svc.mapMutex.Lock()
-	defer svc.mapMutex.Unlock()
-
 	if s == nil {
 		delete(svc.Hashmap, streamUUID)
 	} else {
 		svc.Hashmap[streamUUID] = s
 	}
+	svc.mapMutex.Unlock()
 }
 
 func NewService() *Service {
