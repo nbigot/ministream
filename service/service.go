@@ -163,23 +163,25 @@ func (svc *Service) DeleteStream(streamUUID StreamUUID) error {
 
 func (svc *Service) GetStream(uuid StreamUUID) *Stream {
 	svc.mapMutex.RLock()
-	defer svc.mapMutex.RUnlock()
 
 	if s, found := svc.Hashmap[uuid]; found {
+		svc.mapMutex.RUnlock()
 		return s
 	}
 
+	svc.mapMutex.RUnlock()
 	return nil
 }
 
 func (svc *Service) GetStreamsUUIDs() StreamUUIDList {
 	svc.mapMutex.RLock()
-	defer svc.mapMutex.RUnlock()
 
 	uuids := make([]StreamUUID, 0, len(svc.Hashmap))
 	for k := range svc.Hashmap {
 		uuids = append(uuids, k)
 	}
+
+	svc.mapMutex.RUnlock()
 	return uuids
 }
 
