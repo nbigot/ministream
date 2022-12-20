@@ -1,5 +1,11 @@
 # Ministream
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/nbigot/ministream)](https://goreportcard.com/report/github.com/nbigot/ministream)
+[![license](https://img.shields.io/github/license/nbigot/ministream)](https://github.com/nbigot/ministream/blob/main/LICENSE)
+
+
+## Overview
+
 Ministream is an open-source real-time data stream service.
 Ministream is well suited for event driven architectures.
 
