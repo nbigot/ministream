@@ -38,9 +38,9 @@ import (
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/streams [get]
 func ListStreams(c *fiber.Ctx) error {
-	var streamsUUIDs types.StreamUUIDList = nil
 	var jq *gojq.Query
 	var err error
+
 	if jq, err = getJQFromString(c.Query("jq")); err != nil {
 		vErr := apierror.ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
 		httpError := apierror.APIError{
@@ -59,6 +59,8 @@ func ListStreams(c *fiber.Ctx) error {
 	if abacCtx != nil {
 		abac = abacCtx.(*rbac.ABAC)
 	}
+
+	var streamsUUIDs types.StreamUUIDList
 	if jq == nil && abac == nil {
 		streamsUUIDs = service.StreamService.GetStreamsUUIDs()
 	} else {
