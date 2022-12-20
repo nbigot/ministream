@@ -282,7 +282,7 @@ func (s *Stream) Run() {
 			return
 
 		case command := <-immediateExecCh:
-			// no flush timeout configured. Immediatly execute command
+			// no flush timeout configured. Immediately execute command
 			s.bufferizeMessage(command, true)
 
 		case command := <-deferedExecCh:
