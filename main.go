@@ -3,14 +3,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"ministream/auth"
-	"ministream/config"
-	"ministream/log"
-	"ministream/service"
-	"ministream/startup"
-	"ministream/stream"
-	"ministream/web"
 	"os"
+
+	"github.com/nbigot/ministream/auth"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/service"
+	"github.com/nbigot/ministream/startup"
+	"github.com/nbigot/ministream/stream"
+	"github.com/nbigot/ministream/web"
 )
 
 func argparse() {

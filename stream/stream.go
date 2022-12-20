@@ -3,11 +3,12 @@ package stream
 import (
 	"errors"
 	"fmt"
-	"ministream/buffering"
-	"ministream/config"
-	. "ministream/types"
 	"sync"
 	"time"
+
+	"github.com/nbigot/ministream/buffering"
+	"github.com/nbigot/ministream/config"
+	. "github.com/nbigot/ministream/types"
 
 	"github.com/dustin/go-humanize"
 	"github.com/itchyny/gojq"

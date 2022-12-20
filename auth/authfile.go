@@ -3,8 +3,9 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-	"ministream/config"
 	"os"
+
+	"github.com/nbigot/ministream/config"
 )
 
 type AuthFile struct {

@@ -2,10 +2,11 @@ package jsonfileprovider
 
 import (
 	"io/ioutil"
-	"ministream/types"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"go.uber.org/zap"

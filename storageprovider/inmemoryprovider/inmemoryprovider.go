@@ -2,11 +2,12 @@ package inmemoryprovider
 
 import (
 	"fmt"
-	"ministream/buffering"
-	"ministream/config"
-	"ministream/storageprovider"
-	"ministream/types"
 	"sync"
+
+	"github.com/nbigot/ministream/buffering"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/dustin/go-humanize"
 	"github.com/google/uuid"

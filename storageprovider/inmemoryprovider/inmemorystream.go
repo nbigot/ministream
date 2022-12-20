@@ -3,9 +3,10 @@ package inmemoryprovider
 import (
 	"errors"
 	"fmt"
-	"ministream/types"
 	"sync"
 	"time"
+
+	"github.com/nbigot/ministream/types"
 )
 
 type InMemoryStream struct {

@@ -1,6 +1,6 @@
 package storageprovider
 
-import "ministream/types"
+import "github.com/nbigot/ministream/types"
 
 type IStorageCatalog interface {
 	Init() error

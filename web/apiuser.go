@@ -1,14 +1,15 @@
 package web
 
 import (
-	"ministream/account"
-	"ministream/config"
-	"ministream/constants"
-	"ministream/log"
-	"ministream/rbac"
-	"ministream/stream"
-	"ministream/web/apierror"
 	"strings"
+
+	"github.com/nbigot/ministream/account"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/rbac"
+	"github.com/nbigot/ministream/stream"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"

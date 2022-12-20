@@ -1,9 +1,10 @@
 package buffering
 
 import (
-	. "ministream/types"
 	"sync"
 	"time"
+
+	. "github.com/nbigot/ministream/types"
 )
 
 type IStreamWriter interface {

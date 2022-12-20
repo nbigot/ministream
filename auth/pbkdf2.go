@@ -7,9 +7,10 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
-	"ministream/constants"
 	"regexp"
 	"strconv"
+
+	"github.com/nbigot/ministream/constants"
 
 	"golang.org/x/crypto/pbkdf2"
 )

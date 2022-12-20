@@ -2,7 +2,8 @@ package storageprovider
 
 import (
 	"fmt"
-	"ministream/config"
+
+	"github.com/nbigot/ministream/config"
 
 	"go.uber.org/zap"
 )

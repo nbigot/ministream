@@ -1,11 +1,12 @@
 package service
 
 import (
-	"ministream/config"
-	"ministream/startup"
-	"ministream/stream"
-	"ministream/types"
 	"testing"
+
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/startup"
+	"github.com/nbigot/ministream/stream"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"

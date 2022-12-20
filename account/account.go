@@ -1,8 +1,9 @@
 package account
 
 import (
-	"ministream/log"
 	"os"
+
+	"github.com/nbigot/ministream/log"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"

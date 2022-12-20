@@ -1,14 +1,15 @@
 package web
 
 import (
-	"ministream/auditlog"
-	"ministream/config"
-	"ministream/log"
-	"ministream/rbac"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/nbigot/ministream/auditlog"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/rbac"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

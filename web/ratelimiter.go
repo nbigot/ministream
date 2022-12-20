@@ -2,8 +2,9 @@ package web
 
 import (
 	"fmt"
-	"ministream/config"
 	"time"
+
+	"github.com/nbigot/ministream/config"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"

@@ -2,16 +2,17 @@ package service
 
 import (
 	"errors"
-	"ministream/buffering"
-	"ministream/config"
-	"ministream/constants"
-	"ministream/log"
-	"ministream/storageprovider"
-	. "ministream/stream"
-	. "ministream/types"
-	. "ministream/web/apierror"
 	"sync"
 	"time"
+
+	"github.com/nbigot/ministream/buffering"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/storageprovider"
+	. "github.com/nbigot/ministream/stream"
+	. "github.com/nbigot/ministream/types"
+	. "github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

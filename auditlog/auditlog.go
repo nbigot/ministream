@@ -2,11 +2,12 @@ package auditlog
 
 import (
 	"errors"
-	"ministream/config"
-	"ministream/constants"
-	"ministream/log"
-	. "ministream/web/apierror"
 	"strings"
+
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/log"
+	. "github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"

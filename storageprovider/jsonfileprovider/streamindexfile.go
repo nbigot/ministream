@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"ministream/config"
-	. "ministream/types"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/nbigot/ministream/config"
+	. "github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"

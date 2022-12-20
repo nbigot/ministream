@@ -1,4 +1,4 @@
-module ministream
+module github.com/nbigot/ministream
 
 go 1.19
 

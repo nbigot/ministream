@@ -1,9 +1,9 @@
 package web
 
 import (
-	"ministream/auth"
-	"ministream/constants"
-	"ministream/web/apierror"
+	"github.com/nbigot/ministream/auth"
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 )

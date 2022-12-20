@@ -1,10 +1,11 @@
 package web
 
 import (
-	"ministream/constants"
-	"ministream/types"
-	"ministream/web/apierror"
 	"time"
+
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/types"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/go-playground/validator"
 	"github.com/gofiber/fiber/v2"

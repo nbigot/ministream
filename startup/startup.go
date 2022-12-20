@@ -1,9 +1,9 @@
 package startup
 
 import (
-	"ministream/storageprovider"
-	"ministream/storageprovider/inmemoryprovider"
-	"ministream/storageprovider/jsonfileprovider"
+	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/storageprovider/inmemoryprovider"
+	"github.com/nbigot/ministream/storageprovider/jsonfileprovider"
 )
 
 func Start() error {

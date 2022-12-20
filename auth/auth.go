@@ -2,7 +2,8 @@ package auth
 
 import (
 	"fmt"
-	"ministream/config"
+
+	"github.com/nbigot/ministream/config"
 )
 
 type AuthenticateMethod interface {

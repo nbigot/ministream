@@ -3,9 +3,10 @@ package stream
 import (
 	"context"
 	"errors"
-	"ministream/types"
-	. "ministream/types"
 	"time"
+
+	"github.com/nbigot/ministream/types"
+	. "github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"github.com/itchyny/gojq"

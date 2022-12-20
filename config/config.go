@@ -3,8 +3,9 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
-	"ministream/log"
 	"time"
+
+	"github.com/nbigot/ministream/log"
 
 	"os"
 

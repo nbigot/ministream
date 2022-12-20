@@ -1,10 +1,10 @@
 package stream
 
 import (
-	"ministream/account"
-	"ministream/config"
-	"ministream/log"
-	"ministream/rbac"
+	"github.com/nbigot/ministream/account"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/rbac"
 
 	"go.uber.org/zap"
 )

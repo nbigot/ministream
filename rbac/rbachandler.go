@@ -3,9 +3,10 @@ package rbac
 import (
 	"errors"
 	"fmt"
-	"ministream/config"
-	"ministream/constants"
-	. "ministream/web/apierror"
+
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/constants"
+	. "github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 )

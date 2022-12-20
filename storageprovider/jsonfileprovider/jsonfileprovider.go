@@ -3,13 +3,14 @@ package jsonfileprovider
 import (
 	"errors"
 	"fmt"
-	"ministream/buffering"
-	"ministream/config"
-	"ministream/storageprovider"
-	"ministream/types"
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/nbigot/ministream/buffering"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"

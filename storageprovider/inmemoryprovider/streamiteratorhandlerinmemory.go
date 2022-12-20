@@ -3,7 +3,8 @@ package inmemoryprovider
 import (
 	"bufio"
 	"errors"
-	"ministream/types"
+
+	"github.com/nbigot/ministream/types"
 
 	"go.uber.org/zap"
 )

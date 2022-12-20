@@ -2,12 +2,13 @@ package web
 
 import (
 	"errors"
-	"ministream/auth"
-	"ministream/config"
-	"ministream/constants"
-	"ministream/rbac"
-	"ministream/web/apierror"
 	"time"
+
+	"github.com/nbigot/ministream/auth"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/constants"
+	"github.com/nbigot/ministream/rbac"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v2"

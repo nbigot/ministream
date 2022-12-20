@@ -3,13 +3,14 @@ package auth
 import (
 	"encoding/json"
 	"fmt"
-	"ministream/account"
-	"ministream/config"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/nbigot/ministream/account"
+	"github.com/nbigot/ministream/config"
 )
 
 type AuthHTTP struct {

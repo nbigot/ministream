@@ -1,8 +1,9 @@
 package inmemoryprovider
 
 import (
-	"ministream/types"
 	"sync"
+
+	"github.com/nbigot/ministream/types"
 
 	"go.uber.org/zap"
 )

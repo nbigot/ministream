@@ -1,9 +1,9 @@
 package storageprovider
 
 import (
-	"ministream/buffering"
-	"ministream/config"
-	"ministream/types"
+	"github.com/nbigot/ministream/buffering"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/types"
 
 	"go.uber.org/zap"
 )

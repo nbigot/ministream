@@ -1,7 +1,7 @@
 package web
 
 import (
-	"ministream/stream"
+	"github.com/nbigot/ministream/stream"
 
 	"github.com/gofiber/fiber/v2"
 )

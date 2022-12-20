@@ -1,7 +1,7 @@
 package stream
 
 import (
-	. "ministream/types"
+	. "github.com/nbigot/ministream/types"
 )
 
 type GetStreamRecordsResponse struct {

@@ -4,8 +4,9 @@ import (
 	"bufio"
 	"errors"
 	"io"
-	"ministream/types"
 	"os"
+
+	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"go.uber.org/zap"

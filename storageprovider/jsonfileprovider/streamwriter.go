@@ -4,10 +4,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"ministream/types"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"go.uber.org/zap"
