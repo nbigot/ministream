@@ -69,9 +69,11 @@ definitions:
     type: object
   stream.GetRecordsIteratorStatsResponse:
     properties:
-      lastMessageRead:
+      lastRecordIdRead:
         type: integer
       message:
+        type: string
+      name:
         type: string
       status:
         type: string
@@ -89,6 +91,8 @@ definitions:
       countSkipped:
         type: integer
       duration:
+        type: integer
+      lastRecordIdRead:
         type: integer
       records:
         items: {}
@@ -291,7 +295,7 @@ info:
   description: This documentation describes MiniStream API
   license:
     name: MIT
-  termsOfService: http://swagger.io/terms/
+    url: https://github.com/nbigot/ministream/blob/main/LICENSE
   title: MiniStream API
   version: "1.0"
 paths:
@@ -429,91 +433,6 @@ paths:
       summary: Validate API Key
       tags:
       - Account
-  /api/v1/job/:
-    post:
-      consumes:
-      - application/json
-      description: Create a job
-      operationId: job-create
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            items:
-              type: string
-            type: array
-      summary: Create a job
-      tags:
-      - Job
-  /api/v1/job/{jobuuid}:
-    delete:
-      consumes:
-      - application/json
-      description: Delete a job
-      operationId: job-delete
-      parameters:
-      - description: Some job UUID
-        format: uuid.UUID
-        in: path
-        name: jobuuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            items:
-              type: string
-            type: array
-      summary: Delete a job
-      tags:
-      - Job
-    get:
-      consumes:
-      - application/json
-      description: Get the job description and status
-      operationId: job-get
-      parameters:
-      - description: Some job UUID
-        format: uuid.UUID
-        in: path
-        name: jobuuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            items:
-              type: string
-            type: array
-      summary: Get a job
-      tags:
-      - Job
-  /api/v1/jobs:
-    get:
-      consumes:
-      - application/json
-      description: Get the list of all jobs UUIDs
-      operationId: job-list
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            items:
-              type: string
-            type: array
-      summary: List jobs
-      tags:
-      - Job
   /api/v1/stream:
     post:
       consumes:
@@ -590,32 +509,6 @@ paths:
       tags:
       - Stream
   /api/v1/stream/{streamuuid}/iterator:
-    delete:
-      consumes:
-      - application/json
-      description: Close an existing stream records iterator by it's UUID
-      operationId: stream-close-records-iterator
-      parameters:
-      - description: Stream UUID
-        format: uuid.UUID
-        in: path
-        name: streamuuid
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            $ref: '#/definitions/stream.CloseRecordsIteratorResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/apierror.APIError'
-      summary: Close a stream records iterator
-      tags:
-      - Stream
     post:
       consumes:
       - application/json
@@ -643,7 +536,40 @@ paths:
       summary: Create stream records iterator
       tags:
       - Stream
-  /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/records:
+  /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}:
+    delete:
+      consumes:
+      - application/json
+      description: Close an existing stream records iterator by it's UUID
+      operationId: stream-close-records-iterator
+      parameters:
+      - description: Stream UUID
+        format: uuid.UUID
+        in: path
+        name: streamuuid
+        required: true
+        type: string
+      - description: Stream iterator UUID
+        format: uuid.UUID
+        in: path
+        name: streamiteratoruuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/stream.CloseRecordsIteratorResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apierror.APIError'
+      summary: Close a stream records iterator
+      tags:
+      - Stream
+  /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/records:
     get:
       consumes:
       - application/json
@@ -656,13 +582,14 @@ paths:
         name: streamuuid
         required: true
         type: string
-      - description: Iterator UUID
+      - description: Stream iterator UUID
         format: uuid.UUID
         in: path
-        name: iteratoruuid
+        name: streamiteratoruuid
         required: true
         type: string
       - description: int max records
+        example: 10
         in: query
         name: maxRecords
         type: integer
@@ -684,7 +611,7 @@ paths:
       summary: Get stream records
       tags:
       - Stream
-  /api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/stats:
+  /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/stats:
     get:
       consumes:
       - application/json
@@ -698,10 +625,10 @@ paths:
         name: streamuuid
         required: true
         type: string
-      - description: Iterator UUID
+      - description: Stream iterator UUID
         format: uuid.UUID
         in: path
-        name: iteratoruuid
+        name: streamiteratoruuid
         required: true
         type: string
       produces:
@@ -898,6 +825,7 @@ paths:
       operationId: stream-list
       parameters:
       - description: string jq filter
+        example: '".name == \"test 8\""'
         in: query
         name: jq
         type: string
@@ -925,6 +853,7 @@ paths:
       operationId: stream-list-and-properties
       parameters:
       - description: string jq filter
+        example: '".name == \"test 8\""'
         in: query
         name: jq
         type: string

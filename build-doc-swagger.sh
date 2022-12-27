@@ -1,1 +1,1 @@
-swag init
+swag init --exclude ignore

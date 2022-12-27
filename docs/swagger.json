@@ -3,10 +3,10 @@
     "info": {
         "description": "This documentation describes MiniStream API",
         "title": "MiniStream API",
-        "termsOfService": "http://swagger.io/terms/",
         "contact": {},
         "license": {
-            "name": "MIT"
+            "name": "MIT",
+            "url": "https://github.com/nbigot/ministream/blob/main/LICENSE"
         },
         "version": "1.0"
     },
@@ -223,132 +223,6 @@
                 }
             }
         },
-        "/api/v1/job/": {
-            "post": {
-                "description": "Create a job",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Job"
-                ],
-                "summary": "Create a job",
-                "operationId": "job-create",
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/job/{jobuuid}": {
-            "get": {
-                "description": "Get the job description and status",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Job"
-                ],
-                "summary": "Get a job",
-                "operationId": "job-get",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid.UUID",
-                        "description": "Some job UUID",
-                        "name": "jobuuid",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Delete a job",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Job"
-                ],
-                "summary": "Delete a job",
-                "operationId": "job-delete",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "format": "uuid.UUID",
-                        "description": "Some job UUID",
-                        "name": "jobuuid",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/jobs": {
-            "get": {
-                "description": "Get the list of all jobs UUIDs",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Job"
-                ],
-                "summary": "List jobs",
-                "operationId": "job-list",
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/stream": {
             "post": {
                 "description": "Create a new stream",
@@ -538,7 +412,9 @@
                         }
                     }
                 }
-            },
+            }
+        },
+        "/api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}": {
             "delete": {
                 "description": "Close an existing stream records iterator by it's UUID",
                 "consumes": [
@@ -560,6 +436,14 @@
                         "name": "streamuuid",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid.UUID",
+                        "description": "Stream iterator UUID",
+                        "name": "streamiteratoruuid",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -578,7 +462,7 @@
                 }
             }
         },
-        "/api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/records": {
+        "/api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/records": {
             "get": {
                 "description": "Get records for the given stream UUID",
                 "consumes": [
@@ -604,13 +488,14 @@
                     {
                         "type": "string",
                         "format": "uuid.UUID",
-                        "description": "Iterator UUID",
-                        "name": "iteratoruuid",
+                        "description": "Stream iterator UUID",
+                        "name": "streamiteratoruuid",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
+                        "example": 10,
                         "description": "int max records",
                         "name": "maxRecords",
                         "in": "query"
@@ -638,7 +523,7 @@
                 }
             }
         },
-        "/api/v1/stream/{streamuuid}/iterator/{iteratoruuid}/stats": {
+        "/api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/stats": {
             "get": {
                 "description": "Get statistics for the given stream UUID and stream record iterator UUID",
                 "consumes": [
@@ -664,8 +549,8 @@
                     {
                         "type": "string",
                         "format": "uuid.UUID",
-                        "description": "Iterator UUID",
-                        "name": "iteratoruuid",
+                        "description": "Stream iterator UUID",
+                        "name": "streamiteratoruuid",
                         "in": "path",
                         "required": true
                     }
@@ -917,6 +802,7 @@
                 "parameters": [
                     {
                         "type": "string",
+                        "example": "\".name == \\\"test 8\\\"\"",
                         "description": "string jq filter",
                         "name": "jq",
                         "in": "query"
@@ -958,6 +844,7 @@
                 "parameters": [
                     {
                         "type": "string",
+                        "example": "\".name == \\\"test 8\\\"\"",
                         "description": "string jq filter",
                         "name": "jq",
                         "in": "query"
@@ -1226,10 +1113,13 @@
         "stream.GetRecordsIteratorStatsResponse": {
             "type": "object",
             "properties": {
-                "lastMessageRead": {
+                "lastRecordIdRead": {
                     "type": "integer"
                 },
                 "message": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 },
                 "status": {
@@ -1256,6 +1146,9 @@
                     "type": "integer"
                 },
                 "duration": {
+                    "type": "integer"
+                },
+                "lastRecordIdRead": {
                     "type": "integer"
                 },
                 "records": {

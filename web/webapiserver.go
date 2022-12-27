@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -203,12 +204,19 @@ func StartSwaggerServer(errs chan error) *fiber.App {
 
 	AddSwaggerRoute(appSwagger)
 
+	protocol := "http"
+	if config.Configuration.WebServer.Swagger.Https {
+		protocol = "https"
+	}
+	url := fmt.Sprintf("%s://%s/index.html", protocol, config.Configuration.WebServer.Swagger.Address)
+
 	if config.Configuration.WebServer.Swagger.Https {
 		go func() {
 			log.Logger.Info(
 				"Start Swagger HTTPS web server",
 				zap.String("topic", "server"),
 				zap.String("method", "StartSwaggerServer"),
+				zap.String("url", url),
 			)
 			if err := appSwagger.ListenTLS(
 				config.Configuration.WebServer.Swagger.Address,
@@ -224,6 +232,7 @@ func StartSwaggerServer(errs chan error) *fiber.App {
 				"Start Swagger HTTP web server",
 				zap.String("topic", "server"),
 				zap.String("method", "StartSwaggerServer"),
+				zap.String("url", url),
 			)
 			if err := appSwagger.Listen(config.Configuration.WebServer.Swagger.Address); err != nil {
 				errs <- err

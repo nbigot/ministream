@@ -23,8 +23,8 @@ func argparse() {
 // @title MiniStream API
 // @version 1.0
 // @description This documentation describes MiniStream API
-// @termsOfService http://swagger.io/terms/
 // @license.name MIT
+// @license.url https://github.com/nbigot/ministream/blob/main/LICENSE
 // @host 127.0.0.1:8080
 // @BasePath /
 func main() {
