@@ -51,11 +51,8 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 }
 
 func (m *AuthFile) Initialize(c *config.Config) error {
-	if c.Auth.Methods.File.Filename == "" {
-		m.filename = c.DataDirectory + "secrets.json"
-	} else {
-		m.filename = c.Auth.Methods.File.Filename
-	}
+	// example: "/app/data/secrets/secrets.json"
+	m.filename = c.Auth.Methods.File.Filename
 	return m.LoadCredentialsFromFile(m.filename)
 }
 

@@ -33,8 +33,10 @@ type Config struct {
 	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
-	AccountFile   string     `yaml:"-"`
-	Streams       struct {
+	Account       struct {
+		Filename string `yaml:"filename"`
+	}
+	Streams struct {
 		BulkFlushFrequency        int  `yaml:"bulkFlushFrequency"`
 		BulkMaxSize               int  `yaml:"bulkMaxSize"`
 		ChannelBufferSize         int  `yaml:"channelBufferSize"`
@@ -125,9 +127,6 @@ type Config struct {
 var ConfigFile = ""
 var Configuration Config
 
-// example:
-// https://www.programmerall.com/article/67701658436/
-
 func LoadConfig(filename string) error {
 
 	file, err := os.Open(filename)
@@ -146,10 +145,14 @@ func LoadConfig(filename string) error {
 		return fmt.Errorf("error while parsing configuration file %s", filename)
 	}
 
-	Configuration.AccountFile = Configuration.DataDirectory + "account.json"
+	// example: Configuration.Account.Filename = "/app/data/secrets/account.json"
+	if Configuration.Account.Filename == "" {
+		return fmt.Errorf("error in configuration file: you must specify a filename for account")
+	}
 
-	if Configuration.RBAC.Filename == "" {
-		Configuration.RBAC.Filename = Configuration.DataDirectory + "rbac.json"
+	// example: Configuration.RBAC.Filename = "/app/data/secrets/rbac.json"
+	if Configuration.RBAC.Enable && Configuration.RBAC.Filename == "" {
+		return fmt.Errorf("error in configuration file: you must specify a filename for RBAC")
 	}
 
 	log.InitLogger(&Configuration.LoggerConfig)

@@ -19,12 +19,12 @@ func LoadServerAuthConfig() {
 		zap.String("method", "LoadServerAuthConfig"),
 	)
 
-	account, err := account.LoadAccount(config.Configuration.AccountFile)
+	account, err := account.LoadAccount(config.Configuration.Account.Filename)
 	if err != nil {
 		log.Logger.Fatal("Error while loading account",
 			zap.String("topic", "server"),
 			zap.String("method", "GoServer"),
-			zap.String("filename", config.Configuration.AccountFile),
+			zap.String("filename", config.Configuration.Account.Filename),
 			zap.Error(err),
 		)
 	}
