@@ -7,8 +7,11 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"math/rand"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/nbigot/ministream/constants"
 
@@ -137,6 +140,26 @@ func HashPassword(digest string, iterations int, salt string, password string) (
 		}
 		return p.ToString(), nil
 	}
+}
+
+func GenerateRandomSalt(length int) string {
+	rand.Seed(time.Now().UnixNano())
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
+}
+
+func GenerateRandomPassword(length int) string {
+	rand.Seed(time.Now().UnixNano())
+	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.")
+	var b strings.Builder
+	for i := 0; i < length; i++ {
+		b.WriteRune(chars[rand.Intn(len(chars))])
+	}
+	return b.String()
 }
 
 func init() {
