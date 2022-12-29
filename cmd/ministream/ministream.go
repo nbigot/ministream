@@ -30,7 +30,6 @@ func argparse() {
 func main() {
 	// 127.0.0.1:443
 	argparse()
-	fmt.Println("Start")
 	if err := config.LoadConfig(config.ConfigFile); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
