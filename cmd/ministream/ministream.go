@@ -14,9 +14,23 @@ import (
 	"github.com/nbigot/ministream/web"
 )
 
+// This variable is set at compile time with ldflags arg
+//
+// Example:
+//
+//	$ go build -ldflags="-X 'main.Version=v1.0.0'" cmd/ministream/ministream.go
+var Version = "v0.0.0"
+
 func argparse() {
+	showVersion := flag.Bool("version", false, "Show version")
 	configFilePath := flag.String("config", "config.yaml", "Filepath to config.yaml")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("Version: %s\n", Version)
+		os.Exit(0)
+	}
+
 	config.ConfigFile = *configFilePath
 }
 
