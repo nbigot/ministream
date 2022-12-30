@@ -4,9 +4,11 @@ import (
 	"github.com/nbigot/ministream/storageprovider"
 	"github.com/nbigot/ministream/storageprovider/inmemoryprovider"
 	"github.com/nbigot/ministream/storageprovider/jsonfileprovider"
+	"github.com/nbigot/ministream/web"
 )
 
 func Start() error {
+	web.JWTInit()
 	return SetupStorageProviders()
 }
 

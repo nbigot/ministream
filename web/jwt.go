@@ -2,6 +2,7 @@ package web
 
 import (
 	"errors"
+	"math/rand"
 	"time"
 
 	"github.com/nbigot/ministream/auth"
@@ -173,4 +174,22 @@ func GenerateJWT(accountId string, isSuperUser bool, accessKeyId string, secretA
 
 func JWTRevokeAll() {
 	config.Configuration.WebServer.JWT.RevokeEmittedBeforeDate = time.Now()
+}
+
+func JWTInit() {
+	// generate a secret key if the default one from the configuration file is empty
+	if config.Configuration.WebServer.JWT.SecretKey != "" {
+		return
+	}
+
+	// note: a new key generated at program startup implies that
+	// all jwt previously generated will be obseleted,
+	// therefore all application/user will have to authenticate again.
+
+	// generate a random secret key
+	key := make([]byte, 256)
+	if _, err := rand.Read(key); err != nil {
+		panic(err)
+	}
+	config.Configuration.WebServer.JWT.SecretKey = string(key[:])
 }
