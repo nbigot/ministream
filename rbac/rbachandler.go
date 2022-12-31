@@ -123,26 +123,9 @@ func NewRBACHandler(cfg *RBACHandlerConfig) fiber.Handler {
 			for _, rule := range role.Rules {
 				for _, actionName := range rule.Actions {
 					if cfg.Action == actionName {
-						if rule.Abac != nil {
-							c.Locals(cfg.ABACContextKey, rule.Abac)
-						}
-						if rule.Abac == nil || cfg.ABACGetPropertiesHandler == nil {
-							// action authorized
-							c.Locals(cfg.RBACContextKey, map[string]*string{"user": &user, "role": &role.Id, "rule": &rule.Id, "action": &cfg.Action})
-							return cfg.SuccessHandler(c)
-						} else {
-							properties, err := cfg.ABACGetPropertiesHandler(c)
-							if err != nil {
-								return cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err.Error()))
-							} else {
-								if grant, err := CheckABAC(c, properties, rule.Abac); err != nil {
-									return cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err)) /* err.Error()*/
-								} else if grant {
-									// action authorized for this specific resource
-									c.Locals(cfg.RBACContextKey, map[string]*string{"user": &user, "role": &role.Id, "rule": &rule.Id, "action": &cfg.Action, "abac": &rule.Abac.JqDef})
-									return cfg.SuccessHandler(c)
-								}
-							}
+						shouldReturn, returnValue := CheckRBAC(c, cfg, role, rule, &user)
+						if shouldReturn {
+							return returnValue
 						}
 					}
 				}
@@ -153,6 +136,33 @@ func NewRBACHandler(cfg *RBACHandlerConfig) fiber.Handler {
 		c.Locals(cfg.RBACContextKey, map[string]*string{"user": &user, "action": &cfg.Action})
 		return cfg.ErrorHandler(c, nil)
 	}
+}
+
+func CheckRBAC(c *fiber.Ctx, cfg *RBACHandlerConfig, role *Role, rule *Rule, user *string) (bool, error) {
+	if rule.Abac != nil {
+		c.Locals(cfg.ABACContextKey, rule.Abac)
+	}
+
+	if rule.Abac == nil || cfg.ABACGetPropertiesHandler == nil {
+		// action authorized
+		c.Locals(cfg.RBACContextKey, map[string]*string{"user": user, "role": &role.Id, "rule": &rule.Id, "action": &cfg.Action})
+		return true, cfg.SuccessHandler(c)
+	}
+
+	properties, err := cfg.ABACGetPropertiesHandler(c)
+	if err != nil {
+		return true, cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err.Error()))
+	} else {
+		if grant, err := CheckABAC(c, properties, rule.Abac); err != nil {
+			return true, cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err))
+		} else if grant {
+			// action authorized for this specific resource
+			c.Locals(cfg.RBACContextKey, map[string]*string{"user": user, "role": &role.Id, "rule": &rule.Id, "action": &cfg.Action, "abac": &rule.Abac.JqDef})
+			return true, cfg.SuccessHandler(c)
+		}
+	}
+
+	return false, nil
 }
 
 func CheckABAC(c *fiber.Ctx, properties interface{}, abac *ABAC) (bool, error) {

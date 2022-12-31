@@ -249,9 +249,9 @@ func (s *Stream) Run() {
 			}
 			if timer != nil {
 				timer.Stop()
+				timer = nil
 			}
 			flushC = nil
-			timer = nil
 			if err = s.ingestBuffer.Save(); err != nil {
 				s.logger.Error(
 					"Can't save stream ingest buffer",
