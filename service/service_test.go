@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/nbigot/ministream/config"
-	"github.com/nbigot/ministream/startup"
+	"github.com/nbigot/ministream/storageprovider/registry"
 	"github.com/nbigot/ministream/stream"
 	"github.com/nbigot/ministream/types"
 
@@ -34,7 +34,7 @@ storage:
 }
 
 func BenchmarkSetStreamMap(b *testing.B) {
-	startup.SetupStorageProviders()
+	registry.SetupStorageProviders()
 
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {
@@ -57,7 +57,7 @@ func BenchmarkSetStreamMap(b *testing.B) {
 }
 
 func TestGetStream(t *testing.T) {
-	startup.SetupStorageProviders()
+	registry.SetupStorageProviders()
 
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {
