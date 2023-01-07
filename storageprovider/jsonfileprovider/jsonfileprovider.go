@@ -10,6 +10,7 @@ import (
 	"github.com/nbigot/ministream/buffering"
 	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/storageprovider/catalog"
 	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
@@ -22,7 +23,7 @@ type FileStorage struct {
 	// implements IStorageProvider interface
 	logger        *zap.Logger
 	logVerbosity  int
-	catalog       storageprovider.IStorageCatalog
+	catalog       catalog.IStorageCatalog
 	mu            sync.Mutex
 	dataDirectory string // root directory to store all data and streams
 }

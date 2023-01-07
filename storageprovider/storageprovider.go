@@ -2,10 +2,7 @@ package storageprovider
 
 import (
 	"github.com/nbigot/ministream/buffering"
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/types"
-
-	"go.uber.org/zap"
 )
 
 type IStorageProvider interface {
@@ -21,24 +18,4 @@ type IStorageProvider interface {
 	NewStreamIteratorHandler(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID) (types.IStreamIteratorHandler, error)
 	NewStreamWriter(*types.StreamInfo) (buffering.IStreamWriter, error)
 	DeleteStream(streamUUID types.StreamUUID) error
-}
-
-func NewStorageProvider(logger *zap.Logger, conf *config.Config) (IStorageProvider, error) {
-	if factory, err := GetFactory(conf.Storage.Type); err != nil {
-		return nil, err
-	} else {
-		spLogger, err := NewLogger(&conf.Storage.LoggerConfig)
-		if err != nil {
-			return nil, err
-		}
-		return factory(spLogger, conf)
-	}
-}
-
-func NewLogger(loggerConfig *zap.Config) (*zap.Logger, error) {
-	logger, err := loggerConfig.Build()
-	if err != nil {
-		return nil, err
-	}
-	return logger, nil
 }

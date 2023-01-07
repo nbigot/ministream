@@ -7,6 +7,7 @@ import (
 	"github.com/nbigot/ministream/buffering"
 	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/storageprovider/catalog"
 	"github.com/nbigot/ministream/types"
 
 	"github.com/dustin/go-humanize"
@@ -18,7 +19,7 @@ type InMemoryStorage struct {
 	// implements IStorageProvider interface
 	logger             *zap.Logger
 	logVerbosity       int
-	catalog            storageprovider.IStorageCatalog
+	catalog            catalog.IStorageCatalog
 	mu                 sync.Mutex
 	inMemoryStreams    map[types.StreamUUID]*InMemoryStream
 	maxRecordsByStream uint64

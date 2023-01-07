@@ -10,6 +10,7 @@ import (
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/storageprovider"
+	"github.com/nbigot/ministream/storageprovider/registry"
 	. "github.com/nbigot/ministream/stream"
 	. "github.com/nbigot/ministream/types"
 	. "github.com/nbigot/ministream/web/apierror"
@@ -356,7 +357,7 @@ func NewService() *Service {
 }
 
 func NewStreamService(logger *zap.Logger, conf *config.Config) (*Service, error) {
-	sp, err := storageprovider.NewStorageProvider(logger, conf)
+	sp, err := registry.NewStorageProvider(logger, conf)
 	if err != nil {
 		return nil, err
 	}

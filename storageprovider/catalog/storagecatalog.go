@@ -1,4 +1,4 @@
-package storageprovider
+package catalog
 
 import "github.com/nbigot/ministream/types"
 
