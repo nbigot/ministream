@@ -43,6 +43,7 @@ type Config struct {
 		MaxIteratorsPerStream     int  `yaml:"maxAllowedIteratorsPerStream"`
 		MaxMessagePerGetOperation uint `yaml:"maxMessagePerGetOperation"`
 		LogVerbosity              int  `yaml:"logVerbosity"`
+		MaxAllowedStreams         uint `json:"maxAllowedStreams" example:"25"`
 	}
 	Auth struct {
 		Enable  bool   `yaml:"enable"`

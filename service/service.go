@@ -35,6 +35,10 @@ func (svc *Service) Init() {
 	svc.sp.Init()
 }
 
+func (svc *Service) GetStreamsCount() int {
+	return len(svc.Hashmap)
+}
+
 func (svc *Service) startStream(info *StreamInfo) (*Stream, error) {
 	var err error
 	var writer buffering.IStreamWriter
@@ -90,6 +94,17 @@ func (svc *Service) LoadStreams() (StreamInfoList, error) {
 }
 
 func (svc *Service) CreateStream(properties *StreamProperties) (*Stream, error) {
+	if svc.conf.Streams.MaxAllowedStreams > 0 && uint(svc.GetStreamsCount()) >= svc.conf.Streams.MaxAllowedStreams {
+		err := errors.New("cannot create stream, limit reached")
+		svc.logger.Error(
+			"Cannot create stream",
+			zap.String("topic", "stream"),
+			zap.String("method", "CreateStream"),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
 	uuid := svc.sp.GenerateNewStreamUuid()
 
 	svc.logger.Info(
