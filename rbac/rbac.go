@@ -46,10 +46,9 @@ type ABAC struct {
 
 type RBACSerializeStruct struct {
 	Users []struct {
-		Id           string   `json:"id"`
-		Description  string   `json:"description"`
-		SecretAPIKey string   `json:"secretAPIKey"`
-		Roles        []string `json:"roles"`
+		Id          string   `json:"id"`
+		Description string   `json:"description"`
+		Roles       []string `json:"roles"`
 	} `json:"users"`
 	Roles []struct {
 		Id          string   `json:"id"`
