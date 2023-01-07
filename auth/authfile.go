@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/nbigot/ministream/config"
+	"go.uber.org/zap"
 )
 
 type AuthFile struct {
@@ -50,9 +51,9 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 	return nil
 }
 
-func (m *AuthFile) Initialize(c *config.Config) error {
+func (m *AuthFile) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
 	// example: "/app/data/secrets/secrets.json"
-	m.filename = c.Auth.Methods.File.Filename
+	m.filename = c.Methods.File.Filename
 	return m.LoadCredentialsFromFile(m.filename)
 }
 

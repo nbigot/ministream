@@ -145,7 +145,7 @@ func CreateStream(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	log.Logger.Info(
 		"Stream created",
 		zap.String("topic", "stream"),
@@ -266,7 +266,7 @@ func DeleteStream(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	log.Logger.Info(
 		"Stream deleted",
 		zap.String("topic", "stream"),
@@ -782,7 +782,7 @@ func RebuildIndex(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	log.Logger.Info(
 		"Stream index rebuilt",
 		zap.String("topic", "stream"),

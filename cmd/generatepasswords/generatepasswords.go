@@ -3,8 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/nbigot/ministream/auth"
+	"github.com/nbigot/ministream/generators"
 )
 
 func main() {
@@ -42,14 +45,15 @@ func main() {
 	}
 
 	fmt.Printf("Generate %d passwords\n", *count)
+	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < *count; i++ {
 		if randomSalt {
-			salt = auth.GenerateRandomSalt(20)
+			salt = generators.GenerateRandomSalt(20, false)
 		}
 
 		if randomPassword {
-			password = auth.GenerateRandomPassword(32)
+			password = generators.GenerateRandomPassword(32, false)
 		}
 
 		if hash, err := auth.HashPassword(*digest, *iterations, salt, password); err == nil {

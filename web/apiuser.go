@@ -63,7 +63,7 @@ func LoginUser(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	accountId := account.GetAccount().Id.String()
+	accountId := account.AccountMgr.GetAccount().Id.String()
 	accessKeyId := c.Get("ACCESS-KEY-ID", "")
 	secretAccessKey := c.Get("SECRET-ACCESS-KEY", "")
 	success, token, claims, _, err := GenerateJWT(accountId, false, accessKeyId, secretAccessKey)

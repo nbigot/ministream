@@ -17,9 +17,8 @@ import (
 )
 
 type GetAccountHTTPJsonResult struct {
-	ID              uuid.UUID               `json:"id" example:"123489e2-b483-467b-8b59-758b33981234"`
-	Name            string                  `json:"name" example:"account name"`
-	AccountSettings account.AccountSettings `json:"accountSettings"`
+	ID   uuid.UUID `json:"id" example:"123489e2-b483-467b-8b59-758b33981234"`
+	Name string    `json:"name" example:"account name"`
 }
 
 // GetAccount godoc
@@ -33,12 +32,12 @@ type GetAccountHTTPJsonResult struct {
 // @Router /api/v1/account [get]
 func GetAccount(c *fiber.Ctx) error {
 	// hide field secretAPIKey
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	return c.JSON(
 		JSONResult{
 			Code:    fiber.StatusOK,
 			Message: "success",
-			Data:    GetAccountHTTPJsonResult{ID: account.Id, Name: account.Name, AccountSettings: account.AccountSettings},
+			Data:    GetAccountHTTPJsonResult{ID: account.Id, Name: account.Name},
 		},
 	)
 }
@@ -68,7 +67,7 @@ func ValidateApiKey(c *fiber.Ctx) error {
 	}
 
 	// The header value for "API-KEY" contains the secret api key
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	apiKey := c.Get(constants.APIKEY, "")
 	if apiKey == account.SecretAPIKey {
 		log.Logger.Info(
@@ -132,7 +131,7 @@ func LoginAccount(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	account := account.GetAccount()
+	account := account.AccountMgr.GetAccount()
 	accountId := account.Id.String()
 
 	// check for super user

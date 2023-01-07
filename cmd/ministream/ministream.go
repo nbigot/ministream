@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/nbigot/ministream/account"
 	"github.com/nbigot/ministream/auth"
 	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/log"
@@ -52,7 +53,11 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	if err := auth.AuthMgr.Initialize(&config.Configuration); err != nil {
+	if err := account.AccountMgr.Initialize(log.Logger, &config.Configuration.Account); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	if err := auth.AuthMgr.Initialize(log.Logger, &config.Configuration.Auth); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

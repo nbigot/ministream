@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/nbigot/ministream/account"
 	"github.com/nbigot/ministream/config"
+	"go.uber.org/zap"
 )
 
 type AuthHTTP struct {
@@ -48,8 +47,7 @@ func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	strApiUrl := strings.Replace(m.url, "{accountid}", account.GetAccount().Id.String(), -1)
-	apiUrl, err := url.Parse(strApiUrl)
+	apiUrl, err := url.Parse(m.url)
 	if err != nil {
 		return err
 	}
@@ -95,22 +93,22 @@ func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	return nil
 }
 
-func (m *AuthHTTP) Initialize(c *config.Config) error {
+func (m *AuthHTTP) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
 	var err error
-	m.url = c.Auth.Methods.HTTP.Url
-	if c.Auth.Methods.HTTP.ProxyUrl != "" {
-		if m.proxyUrl, err = url.Parse(c.Auth.Methods.HTTP.ProxyUrl); err != nil {
+	m.url = c.Methods.HTTP.Url
+	if c.Methods.HTTP.ProxyUrl != "" {
+		if m.proxyUrl, err = url.Parse(c.Methods.HTTP.ProxyUrl); err != nil {
 			return err
 		}
 	} else {
 		m.proxyUrl = nil
 	}
-	m.timeoutInSec = c.Auth.Methods.HTTP.Timeout
+	m.timeoutInSec = c.Methods.HTTP.Timeout
 	if m.timeoutInSec < 1 || m.timeoutInSec > 60 {
 		m.timeoutInSec = 60
 	}
-	m.authToken = c.Auth.Methods.HTTP.AuthToken
-	m.cacheDurationInSec = c.Auth.Methods.HTTP.CacheDurationInSec
+	m.authToken = c.Methods.HTTP.AuthToken
+	m.cacheDurationInSec = c.Methods.HTTP.CacheDurationInSec
 	m.cacheExpiresAt = time.Now().Unix()
 	return nil
 }

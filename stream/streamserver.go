@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"github.com/nbigot/ministream/account"
 	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/rbac"
@@ -18,25 +17,6 @@ func LoadServerAuthConfig() {
 		zap.String("topic", "server"),
 		zap.String("method", "LoadServerAuthConfig"),
 	)
-
-	account, err := account.LoadAccount(config.Configuration.Account.Filename)
-	if err != nil {
-		log.Logger.Fatal("Error while loading account",
-			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
-			zap.String("filename", config.Configuration.Account.Filename),
-			zap.Error(err),
-		)
-	}
-
-	if account.Status != "active" {
-		log.Logger.Fatal("Account is not active, exit program now!",
-			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
-			zap.String("accountId", account.Id.String()),
-		)
-		panic("Account is not active, please check configuration file!")
-	}
 
 	if config.Configuration.RBAC.Enable {
 		err2 := rbac.RbacMgr.Initialize(log.Logger, rbac.ActionList, config.Configuration.RBAC.Filename)

@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/nbigot/ministream/config"
+	"go.uber.org/zap"
 )
 
 type AuthenticateMethod interface {
 	GetMethodName() string
-	Initialize(c *config.Config) error
+	Initialize(logger *zap.Logger, c *config.AuthConfig) error
 	AuthenticateUser(userId string, userPassword string) (bool, error)
 }
 
@@ -35,11 +36,11 @@ func (m *AuthManager) AuthenticateUser(userId string, userPassword string) (bool
 	}
 }
 
-func (m *AuthManager) Initialize(c *config.Config) error {
-	m.enable = c.Auth.Enable
-	m.methodName = c.Auth.Method
+func (m *AuthManager) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
+	m.enable = c.Enable
+	m.methodName = c.Method
 	if method, foundMethod := m.methods[m.methodName]; foundMethod {
-		if err := method.Initialize(c); err != nil {
+		if err := method.Initialize(logger, c); err != nil {
 			return err
 		}
 	} else {

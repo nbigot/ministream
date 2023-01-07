@@ -1,78 +1,40 @@
 package account
 
 import (
-	"os"
+	"github.com/nbigot/ministream/config"
+	"github.com/nbigot/ministream/generators"
 
-	"github.com/nbigot/ministream/log"
-
-	"github.com/goccy/go-json"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
-type AccountUUID = uuid.UUID
-
-type AccountSettings struct {
-	MaxAllowedStreams uint   `json:"maxAllowedStreams" example:"25"`
-	MaxConnections    uint   `json:"maxConnections" example:"50"`
-	Backup            string `json:"backup" example:"1 day"`
-	MaxStorage        uint64 `json:"storage" example:"5368709120"`
+type AccountManager struct {
+	Account *config.Account
 }
 
-type Account struct {
-	Id              AccountUUID     `json:"id" example:"4ce589e2-b483-467b-8b59-758b339801d0"`
-	Name            string          `json:"name" example:"Nicolas"`
-	AccountSettings AccountSettings `json:"accountSettings"`
-	SecretAPIKey    string          `json:"secretAPIKey"`
-	Status          string          `json:"status"`
+var AccountMgr AccountManager
+
+func (m *AccountManager) init() {
 }
 
-var (
-	account *Account
-)
-
-func LoadAccount(filename string) (*Account, error) {
-	log.Logger.Info(
-		"Loading account",
-		zap.String("topic", "server"),
-		zap.String("method", "LoadAccount"),
-		zap.String("filename", filename),
-	)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Logger.Fatal(
-			"Can't open account file",
+func (m *AccountManager) Initialize(logger *zap.Logger, account *config.Account) error {
+	m.Account = account
+	if account.SecretAPIKey == "" {
+		account.SecretAPIKey = generators.GenerateRandomSecretAPIKey(32)
+		logger.Info(
+			"Set random SecretAPIKey",
 			zap.String("topic", "server"),
-			zap.String("method", "LoadAccount"),
-			zap.String("filename", filename),
-			zap.Error(err),
+			zap.String("method", "Initialize"),
+			zap.String("secretapikey", account.SecretAPIKey),
 		)
-		return nil, err
-	}
-	defer file.Close()
-
-	type AccountSerializeStruct struct {
-		Account *Account `json:"account"`
-	}
-	s := AccountSerializeStruct{}
-	jsonDecoder := json.NewDecoder(file)
-	err = jsonDecoder.Decode(&s)
-	if err != nil {
-		log.Logger.Fatal(
-			"Can't decode json account",
-			zap.String("topic", "server"),
-			zap.String("method", "LoadAccount"),
-			zap.String("filename", filename),
-			zap.Error(err),
-		)
-		return nil, err
 	}
 
-	account = s.Account
-	return account, err
+	return nil
 }
 
-func GetAccount() *Account {
-	return account
+func (m *AccountManager) GetAccount() *config.Account {
+	return m.Account
+}
+
+func init() {
+	AccountMgr.init()
 }

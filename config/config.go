@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/nbigot/ministream/log"
 
 	"os"
@@ -13,9 +14,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type User struct {
-	Login    string `yaml:"login"`
-	Password string `yaml:"password"`
+type AccountUUID = uuid.UUID
+
+type Account struct {
+	Id           AccountUUID `json:"id" example:"4ce589e2-b483-467b-8b59-758b339801d0"` // nécessaire pour qu'on ne puisse pas utiliser un jwt sur un autre serveur qui n'a rien à voir
+	Name         string      `json:"name"`
+	SecretAPIKey string      `json:"secretAPIKey"`
+}
+
+type AuthConfig struct {
+	Enable  bool   `yaml:"enable"`
+	Method  string `yaml:"method"`
+	Methods struct {
+		File struct {
+			Filename string `yaml:"filename"`
+		}
+		HTTP struct {
+			Url                string `yaml:"url"`
+			ProxyUrl           string `yaml:"proxy"`
+			AuthToken          string `yaml:"authToken"`
+			Timeout            int    `yaml:"timeout"`
+			CacheDurationInSec int    `yaml:"cacheDurationInSec"`
+		}
+	}
 }
 
 type Config struct {
@@ -33,10 +54,8 @@ type Config struct {
 	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
-	Account       struct {
-		Filename string `yaml:"filename"`
-	}
-	Streams struct {
+	Account       Account    `yaml:"account"`
+	Streams       struct {
 		BulkFlushFrequency        int  `yaml:"bulkFlushFrequency"`
 		BulkMaxSize               int  `yaml:"bulkMaxSize"`
 		ChannelBufferSize         int  `yaml:"channelBufferSize"`
@@ -45,22 +64,7 @@ type Config struct {
 		LogVerbosity              int  `yaml:"logVerbosity"`
 		MaxAllowedStreams         uint `json:"maxAllowedStreams" example:"25"`
 	}
-	Auth struct {
-		Enable  bool   `yaml:"enable"`
-		Method  string `yaml:"method"`
-		Methods struct {
-			File struct {
-				Filename string `yaml:"filename"`
-			}
-			HTTP struct {
-				Url                string `yaml:"url"`
-				ProxyUrl           string `yaml:"proxy"`
-				AuthToken          string `yaml:"authToken"`
-				Timeout            int    `yaml:"timeout"`
-				CacheDurationInSec int    `yaml:"cacheDurationInSec"`
-			}
-		}
-	}
+	Auth AuthConfig `yaml:"auth"`
 	RBAC struct {
 		Enable   bool   `yaml:"enable"`
 		Filename string `yaml:"filename"`
@@ -144,11 +148,6 @@ func LoadConfig(filename string) error {
 	err = yaml.Unmarshal(content, &Configuration)
 	if err != nil {
 		return fmt.Errorf("error while parsing configuration file %s", filename)
-	}
-
-	// example: Configuration.Account.Filename = "/app/data/secrets/account.json"
-	if Configuration.Account.Filename == "" {
-		return fmt.Errorf("error in configuration file: you must specify a filename for account")
 	}
 
 	// example: Configuration.RBAC.Filename = "/app/data/secrets/rbac.json"
