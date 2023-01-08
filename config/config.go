@@ -17,14 +17,15 @@ import (
 type AccountUUID = uuid.UUID
 
 type Account struct {
-	Id           AccountUUID `json:"id" example:"4ce589e2-b483-467b-8b59-758b339801d0"` // nécessaire pour qu'on ne puisse pas utiliser un jwt sur un autre serveur qui n'a rien à voir
-	Name         string      `json:"name"`
-	SecretAPIKey string      `json:"secretAPIKey"`
+	// A unique Id is necessary so that we cannot use a jwt on another server instance
+	Id           AccountUUID `yaml:"id" example:"4ce589e2-b483-467b-8b59-758b339801d0"`
+	Name         string      `yaml:"name"`
+	SecretAPIKey string      `yaml:"secretAPIKey"`
 }
 
 type AuthConfig struct {
 	Enable  bool   `yaml:"enable"`
-	Method  string `yaml:"method"`
+	Method  string `yaml:"method" example:"FILE"`
 	Methods struct {
 		File struct {
 			Filename string `yaml:"filename"`
@@ -41,7 +42,7 @@ type AuthConfig struct {
 
 type Config struct {
 	Storage struct {
-		Type         string     `yaml:"type"`
+		Type         string     `yaml:"type" example:"JSONFile"`
 		LoggerConfig zap.Config `yaml:"logger"`
 		LogVerbosity int        `yaml:"logVerbosity"`
 		JSONFile     struct {

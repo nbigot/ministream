@@ -74,7 +74,8 @@ func JWTPostValidate(c *fiber.Ctx) error {
 	claims := token.Claims.(jwt.MapClaims)
 	valid := claims["iss"] == config.Configuration.WebServer.JWT.ISS &&
 		claims["sub"] == config.Configuration.WebServer.JWT.Sub &&
-		claims["aud"] == config.Configuration.WebServer.JWT.Aud
+		claims["aud"] == config.Configuration.WebServer.JWT.Aud &&
+		claims[constants.JWTClaimsAccountKey] == config.Configuration.Account.Id
 
 	if !valid {
 		httpError := apierror.APIError{
