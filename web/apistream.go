@@ -768,7 +768,18 @@ func RebuildIndex(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	streamPtr.CloseIterators()
+	if itErr := streamPtr.CloseIterators(); itErr != nil {
+		httpError := apierror.APIError{
+			Message:    "cannot rebuild stream index",
+			Details:    itErr.Error(),
+			Code:       constants.ErrorCantRebuildStreamIndex,
+			HttpCode:   fiber.StatusInternalServerError,
+			StreamUUID: streamPtr.GetUUID(),
+			Err:        itErr,
+		}
+		return httpError.HTTPResponse(c)
+	}
+
 	indexStats, err := service.StreamService.BuildIndex(streamUUID)
 	if err != nil {
 		httpError := apierror.APIError{
