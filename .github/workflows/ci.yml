@@ -18,10 +18,6 @@ on:
         required: false
         default: "false"
 
-#env:
-#  DESTDIR: "./bin"
-#  DOCKER_CLI_VERSION: "20.10.17"
-
 permissions:
   contents: read # to fetch code (actions/checkout)
 
@@ -40,3 +36,16 @@ jobs:
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
           version: v1.50.1
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+      - uses: actions/checkout@v3
+      - name: Build
+        run: go build -v cmd/ministream/ministream.go
+      - name: Test
+        run: go test -v ./...
