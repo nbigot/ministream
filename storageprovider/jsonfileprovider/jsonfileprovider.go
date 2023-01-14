@@ -2,9 +2,8 @@ package jsonfileprovider
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 
 	"github.com/nbigot/ministream/buffering"
 	"github.com/nbigot/ministream/config"
@@ -165,23 +164,23 @@ func (s *FileStorage) GetDataDirectory() string {
 }
 
 func (s *FileStorage) GetStreamsDirectoryPath() string {
-	return fmt.Sprintf("%s/streams", s.dataDirectory)
+	return filepath.Join(s.dataDirectory, "streams")
 }
 
 func (s *FileStorage) GetStreamDirectoryPath(streamUUID types.StreamUUID) string {
-	return fmt.Sprintf("%s/streams/%s", s.dataDirectory, streamUUID.String())
+	return filepath.Join(s.GetStreamsDirectoryPath(), streamUUID.String())
 }
 
 func (s *FileStorage) GetMetaDataFilePath(streamUUID types.StreamUUID) string {
-	return fmt.Sprintf("%s/streams/%s/stream.json", s.dataDirectory, streamUUID.String())
+	return filepath.Join(s.GetStreamDirectoryPath(streamUUID), "stream.json")
 }
 
 func (s *FileStorage) GetStreamDataFilePath(streamUUID types.StreamUUID) string {
-	return fmt.Sprintf("%s/streams/%s/data.jsonl", s.dataDirectory, streamUUID.String())
+	return filepath.Join(s.GetStreamDirectoryPath(streamUUID), "data.jsonl")
 }
 
 func (s *FileStorage) GetStreamIndexFilePath(streamUUID types.StreamUUID) string {
-	return fmt.Sprintf("%s/streams/%s/index.bin", s.dataDirectory, streamUUID.String())
+	return filepath.Join(s.GetStreamDirectoryPath(streamUUID), "index.bin")
 }
 
 func (s *FileStorage) CreateDataDirectory() error {
@@ -218,10 +217,6 @@ func (s *FileStorage) BuildIndex(streamUUID types.StreamUUID) (interface{}, erro
 }
 
 func NewStorageProvider(logger *zap.Logger, conf *config.Config) (storageprovider.IStorageProvider, error) {
-	if strings.HasSuffix(conf.Storage.JSONFile.DataDirectory, "/") {
-		return nil, fmt.Errorf("conf.Storage.File.DataDirectory must not end with /")
-	}
-
 	return &FileStorage{
 		logger:        logger,
 		logVerbosity:  conf.Storage.LogVerbosity,

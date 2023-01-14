@@ -2,7 +2,7 @@ package jsonfileprovider
 
 import (
 	"os"
-	"strings"
+	"path/filepath"
 	"sync"
 
 	"github.com/nbigot/ministream/types"
@@ -156,11 +156,7 @@ func (s *StreamCatalogFile) LoadStreamCatalog() (types.StreamUUIDList, error) {
 
 func GetStreamCatalogFilepath(dataDirectory string) string {
 	// streams.json stores the catalog of streams
-	if strings.HasSuffix(dataDirectory, "/") {
-		return dataDirectory + "streams.json"
-	} else {
-		return dataDirectory + "/streams.json"
-	}
+	return filepath.Join(dataDirectory, "streams.json")
 }
 
 func NewStreamCatalogFile(logger *zap.Logger, filepath string) *StreamCatalogFile {

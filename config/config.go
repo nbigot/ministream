@@ -136,13 +136,13 @@ func LoadConfig(filename string) error {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		return fmt.Errorf("error while opening configuration file %s", filename)
+		return fmt.Errorf("error while opening configuration file %s : %s", filename, err.Error())
 	}
 	defer file.Close()
 
 	err = yaml.NewDecoder(file).Decode(&Configuration)
 	if err != nil {
-		return fmt.Errorf("error while parsing configuration file %s", filename)
+		return fmt.Errorf("error while parsing configuration file %s : %s", filename, err.Error())
 	}
 
 	// example: Configuration.RBAC.Filename = "/app/data/secrets/rbac.json"
