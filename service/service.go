@@ -31,8 +31,8 @@ type Service struct {
 	conf     *config.Config
 }
 
-func (svc *Service) Init() {
-	svc.sp.Init()
+func (svc *Service) Init() error {
+	return svc.sp.Init()
 }
 
 func (svc *Service) GetStreamsCount() int {
@@ -329,7 +329,7 @@ func (svc *Service) Stop() {
 		}(streamPtr)
 	}
 	wg.Wait()
-	svc.sp.Stop()
+	_ = svc.sp.Stop()
 	svc.Hashmap = make(StreamMap)
 }
 
@@ -345,6 +345,7 @@ func (svc *Service) setStreamMap(streamUUID StreamUUID, s *Stream) {
 
 func NewService() *Service {
 	var err error
+
 	svc, err := NewStreamService(log.Logger, &config.Configuration)
 	if err != nil {
 		log.Logger.Fatal("Error while instantiate stream service",
@@ -353,7 +354,16 @@ func NewService() *Service {
 			zap.Error(err),
 		)
 	}
-	svc.Init()
+
+	err = svc.Init()
+	if err != nil {
+		log.Logger.Fatal("Error while initialize stream service",
+			zap.String("topic", "server"),
+			zap.String("method", "GoServer"),
+			zap.Error(err),
+		)
+	}
+
 	_, err = svc.LoadStreams()
 	if err != nil {
 		log.Logger.Fatal("Error while loading streams",
@@ -368,6 +378,7 @@ func NewService() *Service {
 		zap.String("topic", "server"),
 		zap.String("method", "GoServer"),
 	)
+
 	return svc
 }
 

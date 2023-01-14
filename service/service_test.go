@@ -34,7 +34,9 @@ storage:
 }
 
 func BenchmarkSetStreamMap(b *testing.B) {
-	registry.SetupStorageProviders()
+	if err := registry.SetupStorageProviders(); err != nil {
+		panic("error while setup storage providers:" + err.Error())
+	}
 
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {
@@ -57,7 +59,9 @@ func BenchmarkSetStreamMap(b *testing.B) {
 }
 
 func TestGetStream(t *testing.T) {
-	registry.SetupStorageProviders()
+	if err := registry.SetupStorageProviders(); err != nil {
+		t.Fatalf("error while setup storage providers:" + err.Error())
+	}
 
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {

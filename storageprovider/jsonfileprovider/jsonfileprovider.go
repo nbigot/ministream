@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/nbigot/ministream/buffering"
 	"github.com/nbigot/ministream/config"
@@ -24,7 +23,6 @@ type FileStorage struct {
 	logger        *zap.Logger
 	logVerbosity  int
 	catalog       catalog.IStorageCatalog
-	mu            sync.Mutex
 	dataDirectory string // root directory to store all data and streams
 }
 

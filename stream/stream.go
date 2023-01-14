@@ -296,7 +296,15 @@ func (s *Stream) Run() {
 
 		case <-flushC:
 			timer.Stop()
-			s.ingestBuffer.Save()
+			if err = s.ingestBuffer.Save(); err != nil {
+				s.logger.Error(
+					"Can't save stream ingest buffer",
+					zap.String("topic", "stream"),
+					zap.String("method", "Run"),
+					zap.String("stream.uuid", s.info.UUID.String()),
+					zap.Error(err),
+				)
+			}
 			flushC = nil
 			timer = nil
 		}
@@ -314,7 +322,15 @@ func (s *Stream) bufferizeMessage(msg DeferedStreamRecord, immediateSave bool) {
 	}
 	s.ingestBuffer.AppendMesssage(msg)
 	if immediateSave || s.ingestBuffer.IsFull() {
-		s.ingestBuffer.Save()
+		if err := s.ingestBuffer.Save(); err != nil {
+			s.logger.Error(
+				"Can't save stream ingest buffer",
+				zap.String("topic", "stream"),
+				zap.String("method", "bufferizeMessage"),
+				zap.String("stream.uuid", s.info.UUID.String()),
+				zap.Error(err),
+			)
+		}
 	}
 }
 
