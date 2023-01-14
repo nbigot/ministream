@@ -1,7 +1,6 @@
 package jsonfileprovider
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -31,11 +30,23 @@ func (s *StreamCatalogFile) EnsureCatalogFileExists() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// if file already exists then do nothing
-	if _, err := os.Stat(s.streamCatalogFilepath); err == nil {
+	if s.CatalogFileExists() {
+		// file already exists therefore do nothing
 		return nil
 	}
 
+	// create file having an empty catalog of streams
+	return s.CreateEmptyCatalogFile()
+}
+
+func (s *StreamCatalogFile) CatalogFileExists() bool {
+	if _, err := os.Stat(s.streamCatalogFilepath); err == nil {
+		return true
+	}
+	return false
+}
+
+func (s *StreamCatalogFile) CreateEmptyCatalogFile() error {
 	// create file having an empty catalog of streams
 	obj := streamListSerializeStruct{}
 	if sJson, err := json.Marshal(obj); err != nil {
@@ -48,7 +59,7 @@ func (s *StreamCatalogFile) EnsureCatalogFileExists() error {
 		)
 		return err
 	} else {
-		if err := ioutil.WriteFile(s.streamCatalogFilepath, sJson, 0644); err != nil {
+		if err := os.WriteFile(s.streamCatalogFilepath, sJson, 0644); err != nil {
 			s.logger.Fatal(
 				"Can't save streams",
 				zap.String("topic", "stream"),
@@ -87,7 +98,7 @@ func (s *StreamCatalogFile) SaveStreamCatalog(streamUUIDs types.StreamUUIDList) 
 		)
 		return err
 	} else {
-		if err := ioutil.WriteFile(s.streamCatalogFilepath, sJson, 0644); err != nil {
+		if err := os.WriteFile(s.streamCatalogFilepath, sJson, 0644); err != nil {
 			s.logger.Fatal(
 				"Can't save streams",
 				zap.String("topic", "stream"),

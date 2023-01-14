@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/google/uuid"
@@ -141,12 +140,7 @@ func LoadConfig(filename string) error {
 	}
 	defer file.Close()
 
-	content, err := ioutil.ReadAll(file)
-	if err != nil {
-		return fmt.Errorf("error while loading configuration file %s", filename)
-	}
-
-	err = yaml.Unmarshal(content, &Configuration)
+	err = yaml.NewDecoder(file).Decode(&Configuration)
 	if err != nil {
 		return fmt.Errorf("error while parsing configuration file %s", filename)
 	}
