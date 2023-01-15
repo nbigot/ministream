@@ -45,7 +45,6 @@ func (h *StreamIteratorHandlerFile) Open() error {
 		return err
 	}
 
-	h.index = NewStreamIndex(h.streamUUID, h.logger)
 	return nil
 }
 
@@ -163,7 +162,7 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (types.MessageId, interface{
 	return lastRecordIdRead, message, true, true, nil
 }
 
-func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, filename string, logger *zap.Logger) *StreamIteratorHandlerFile {
+func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, filename string, idx *StreamIndexFile, logger *zap.Logger) *StreamIteratorHandlerFile {
 	return &StreamIteratorHandlerFile{
 		streamUUID:       streamUUID,
 		itUUID:           iteratorUUID,
@@ -173,7 +172,7 @@ func NewStreamIteratorHandlerFile(streamUUID types.StreamUUID, iteratorUUID type
 		FileOffset:       0,
 		bytesRead:        0,
 		nextRecordIdRead: 0,
-		index:            nil,
+		index:            idx,
 		reader:           nil,
 		logger:           logger,
 	}

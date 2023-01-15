@@ -4,14 +4,12 @@ import (
 	"bufio"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/nbigot/ministream/config"
 	. "github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
@@ -48,10 +46,6 @@ type streamIndexRowMsg struct {
 
 const sizeOfStreamIndexRowMsg int64 = 4 * 8 // 4 fields x 8 bytes per field
 
-func GetIndexFilePath(streamUUID uuid.UUID) string {
-	return fmt.Sprintf("%sstreams/%s/index.bin", config.Configuration.DataDirectory, streamUUID.String())
-}
-
 func (idx *StreamIndexFile) Close() error {
 	if idx.file != nil {
 		return idx.file.Close()
@@ -76,7 +70,7 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 
 	var err error
 	if idx.file != nil {
-		idx.file.Close()
+		_ = idx.file.Close()
 	}
 
 	var streamDataFile *os.File
@@ -98,8 +92,10 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 		)
 		return nil, err
 	}
-	defer idx.file.Close()
-	defer idx.file.Sync()
+	defer func() {
+		_ = idx.file.Sync()
+		_ = idx.file.Close()
+	}()
 
 	var msgOffset MsgOffset = 0
 	var message *DeferedStreamRecord = nil
@@ -128,8 +124,8 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 			}
 		}
 
-		err2 := json.Unmarshal([]byte(line), &message)
-		if err2 != nil {
+		err = json.Unmarshal([]byte(line), &message)
+		if err != nil {
 			idx.logger.Error(
 				"Error while building index",
 				zap.String("topic", "index"),
@@ -140,7 +136,7 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 				zap.Int64("offset", msgOffset),
 				zap.Error(err),
 			)
-			return nil, err2
+			return nil, err
 		}
 
 		row.Id = message.Id
@@ -200,6 +196,7 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 		zap.Time("index.firstMsgTimestamp", stats.FirstMsgTimestamp),
 		zap.Time("index.lastMsgTimestamp", stats.LastMsgTimestamp),
 	)
+
 	return &stats, nil
 }
 
@@ -464,12 +461,12 @@ func (idx *StreamIndexFile) Log() {
 	)
 }
 
-func NewStreamIndex(streamUUID uuid.UUID, logger *zap.Logger) *StreamIndexFile {
+func NewStreamIndex(streamUUID uuid.UUID, filename string, logger *zap.Logger) *StreamIndexFile {
 	return &StreamIndexFile{
 		streamUUID:   streamUUID,
 		logger:       logger,
 		logVerbosity: 0,
-		filename:     GetIndexFilePath(streamUUID),
+		filename:     filename,
 		file:         nil,
 	}
 }

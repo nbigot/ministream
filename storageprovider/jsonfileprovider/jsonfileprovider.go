@@ -196,7 +196,8 @@ func (s *FileStorage) CreateStreamDirectory(streamUUID types.StreamUUID) error {
 }
 
 func (s *FileStorage) NewStreamIteratorHandler(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID) (types.IStreamIteratorHandler, error) {
-	return NewStreamIteratorHandlerFile(streamUUID, iteratorUUID, s.GetStreamDataFilePath(streamUUID), s.logger), nil
+	idx := NewStreamIndex(streamUUID, s.GetStreamIndexFilePath(streamUUID), s.logger)
+	return NewStreamIteratorHandlerFile(streamUUID, iteratorUUID, s.GetStreamDataFilePath(streamUUID), idx, s.logger), nil
 }
 
 func (s *FileStorage) DeleteStream(streamUUID types.StreamUUID) error {
@@ -212,7 +213,7 @@ func (s *FileStorage) NewStreamWriter(info *types.StreamInfo) (buffering.IStream
 }
 
 func (s *FileStorage) BuildIndex(streamUUID types.StreamUUID) (interface{}, error) {
-	idx := NewStreamIndex(streamUUID, s.logger)
+	idx := NewStreamIndex(streamUUID, s.GetStreamIndexFilePath(streamUUID), s.logger)
 	return idx.BuildIndex(s.GetStreamDataFilePath(streamUUID))
 }
 
