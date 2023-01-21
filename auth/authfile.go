@@ -29,9 +29,15 @@ func (m *AuthFile) AuthenticateUser(userId string, password string) (bool, error
 }
 
 func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
+	if filename == "" {
+		// empty credentials
+		m.creds = map[string]*Pbkdf2{}
+		return nil
+	}
+
 	file, err := os.Open(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("can't open credential file: %s", filename)
 	}
 	defer file.Close()
 
@@ -54,7 +60,18 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 func (m *AuthFile) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
 	// example: "/app/data/secrets/secrets.json"
 	m.filename = c.Methods.File.Filename
-	return m.LoadCredentialsFromFile(m.filename)
+	if err := m.LoadCredentialsFromFile(m.filename); err != nil {
+		logger.Error(
+			"can't initialize credentials",
+			zap.String("topic", "credentials"),
+			zap.String("method", "Initialize"),
+			zap.Any("filename", m.filename),
+			zap.Error(err),
+		)
+		return err
+	}
+
+	return nil
 }
 
 func init() {
