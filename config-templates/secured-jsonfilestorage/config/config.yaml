@@ -1,0 +1,135 @@
+# Minimal configuration file for ministream server
+auth:
+    enable: true
+    method: "FILE"
+    methods:
+        file:
+            filename: "/app/data/secrets/secrets.json"
+        http:
+            url: "https://127.0.0.1:8080/account/{accountid}/secrets"
+            cacheDurationInSec: 900
+            authToken: ""
+            proxy: "http://127.0.0.1:8081/proxytoauth"
+            timeout: 5
+account:
+    name: "demo"
+    #id: "00000000-0000-0000-0000-000000000000"
+    secretAPIKey: ""
+rbac:
+    enable: true
+    filename: "/app/data/secrets/rbac.json"
+auditlog:
+    enable: true
+    enableLogAccessGranted: true
+streams:
+    bulkFlushFrequency: 2
+    bulkMaxSize: 100
+    channelBufferSize: 2000
+    maxAllowedIteratorsPerStream: 1000
+    maxMessagePerGetOperation: 10000
+    logVerbosity: 0
+    maxAllowedStreams: 0
+storage:
+    logger:
+        level: "info"
+        development: false
+        disableCaller: true
+        disableStacktrace: true
+        encoding: "json"
+        encoderConfig:
+            messageKey: "message"
+            levelKey: "level"
+            timeKey: "timestamp"
+            nameKey: "name"
+            callerKey: "caller"
+            functionKey: "func"
+            stacktraceKey: "stacktrace"
+            skipLineEnding: false
+            lineEnding: "\n"
+            levelEncoder: ""
+            timeEncoder: "iso8601"
+            durationEncoder: ""
+            callerEncoder: ""
+        outputPaths:
+            - "stdout"
+        errorOutputPaths:
+            - "stdout"
+        initialFields:
+            app: "ministream"
+            storage.provider: "JSONFile"
+    logVerbosity: 0
+    type: "JSONFile"  # "JSONFile" "InMemory"
+    jsonfile:
+        dataDirectory: "/app/data/storage"
+    inmemory:
+        maxRecordsByStream: 0
+        maxSize: "1gb"
+webserver:
+    cors:
+        enable: true
+        allowOrigins: "*"
+        allowHeaders: ""
+    logs:
+        enable: false
+    monitor:
+        enable: false
+    opentelemetry:
+        enable: false
+    rateLimiter:
+        enable: true
+        routeStream:
+            maxRequests: 100000
+            durationInSeconds: 1
+        routeJob:
+            maxRequests: 20
+            durationInSeconds: 60
+        routeAccount:
+            maxRequests: 10
+            durationInSeconds: 60
+    jwt:
+        enable: true
+        secretKey: ""
+        tokenExpireInMinutes: 60
+        iss: "ministream"
+        sub: "auth"
+        aud: "ministream"
+    http:
+        enable: false
+        address: "0.0.0.0:80"
+    https:
+        enable: true
+        address: "0.0.0.0:443"
+        certFile: "/app/certs/cert.pem"
+        keyFile: "/app/certs/key.pem"
+    swagger:
+        enable: false
+        https: false
+        address: "127.0.0.1:8081"
+        certFile: ""
+        keyFile: ""
+logger:
+    level: "info"
+    development: false
+    disableCaller: true
+    disableStacktrace: true
+    encoding: "json"
+    encoderConfig:
+        messageKey: "message"
+        levelKey: "level"
+        timeKey: "timestamp"
+        nameKey: "name"
+        callerKey: "caller"
+        functionKey: "func"
+        stacktraceKey: "stacktrace"
+        skipLineEnding: false
+        lineEnding: "\n"
+        levelEncoder: ""
+        timeEncoder: "iso8601"
+        durationEncoder: ""
+        callerEncoder: ""
+    outputPaths:
+        - "stdout"
+    errorOutputPaths:
+        - "stdout"
+    initialFields:
+        app: "ministream"
