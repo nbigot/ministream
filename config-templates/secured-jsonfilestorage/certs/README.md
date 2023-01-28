@@ -24,6 +24,11 @@ webserver:
 
 ## Generate an SSL certificate
 
+This directory must have two files:
+
+- cert.pem (the certificate file)
+- key.pem (the private key file)
+
 
 ### Generate an ssl certificate with a trusted third-party
 
