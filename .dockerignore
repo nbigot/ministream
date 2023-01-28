@@ -1,0 +1,8 @@
+.git
+**/.gitkeep
+.vscode
+.editorconfig
+ignore
+*.exe
+coverage.out
+docker-template

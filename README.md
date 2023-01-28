@@ -16,6 +16,61 @@ Ministream can easily fit in a standalone docker container.
 Ministream also provides a complete web api to manage the server.
 
 
+## Quick install
+
+### Download source code
+
+```sh
+$ git clone https://github.com/nbigot/ministream.git
+```
+
+
+### Compile
+
+```sh
+$ cd ministream
+$ go build cmd/ministream/ministream.go
+```
+
+
+### Configure
+
+Edit the file *config-templates/docker-minimal/config/config.yaml*
+
+Pay attention to the directory paths in the config file.
+
+
+### Run ministream
+
+```sh
+$ ministream -config config-templates/docker-minimal/config/config.yaml
+```
+
+
+## Docker quick tips
+
+### Download source code
+
+```sh
+$ git clone https://github.com/nbigot/ministream.git
+```
+
+
+### Build a docker image
+
+```sh
+$ cd ministream
+$ docker build -t nbigot/ministream .
+```
+
+
+### Start a docker container
+
+```sh
+$ docker run --name ministream -it -p 8080:8080 nbigot/ministream
+```
+
+
 ## Contribution guidelines
 
 If you want to contribute to Ministream, be sure to review the [code of conduct](CODE_OF_CONDUCT.md).
