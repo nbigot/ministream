@@ -175,6 +175,7 @@ func StartMinistreamServer(errs chan error) *fiber.App {
 				"Start HTTPS web server",
 				zap.String("topic", "server"),
 				zap.String("method", "GoServer"),
+				zap.String("address", config.Configuration.WebServer.HTTPS.Address),
 			)
 			if err := app.ListenTLS(
 				config.Configuration.WebServer.HTTPS.Address,
