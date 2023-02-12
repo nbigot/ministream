@@ -1,8 +1,8 @@
 package web
 
 import (
+	"crypto/rand"
 	"errors"
-	"math/rand"
 	"time"
 
 	"github.com/nbigot/ministream/auth"
