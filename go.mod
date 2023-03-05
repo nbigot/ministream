@@ -7,7 +7,7 @@ require (
 	github.com/go-playground/validator/v10 v10.11.2
 	github.com/goccy/go-json v0.10.0
 	github.com/gofiber/fiber/v2 v2.42.0
-	github.com/gofiber/jwt/v2 v2.2.7
+	github.com/gofiber/jwt/v3 v3.3.6
 	github.com/gofiber/swagger v0.1.9
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.3.0
