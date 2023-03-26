@@ -1,9 +1,10 @@
-FROM golang:1.19 AS build
+FROM golang:1.20 AS build
+ARG MINISTREAM_VERSION=v1.0.0
 WORKDIR /go/src
 COPY . .
 ENV CGO_ENABLED=0
 RUN go mod download
-RUN go build -a -o /go/bin/ministream /go/src/cmd/ministream/ministream.go
+RUN go build -ldflags="-X 'main.Version=${MINISTREAM_VERSION}'" -a -o /go/bin/ministream /go/src/cmd/ministream/ministream.go
 RUN go build -a -o /go/bin/generatepasswords /go/src/cmd/generatepasswords/generatepasswords.go
 
 FROM alpine AS runtime
