@@ -2,10 +2,183 @@ project_name: ministream
 
 builds:
   -
-    # If true, skip the build.
-    # Useful for library projects.
-    # Default is false
-    skip: true
+    skip: false
+    id: ministream
+    binary: ministream
+    env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goamd64:
+      - v2
+      - v3
+    goarm:
+      - 7
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -X main.Version=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+    main: ./cmd/ministream/ministream.go
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+  -
+    skip: false
+    id: generatepasswords
+    env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goamd64:
+      - v2
+      - v3
+    goarm:
+      - 7
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -X main.Version=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+    main: ./cmd/generatepasswords/generatepasswords.go
+    binary: generatepasswords
+    ignore:
+      - goos: windows
+        goarch: arm64
+      - goos: windows
+        goarch: arm
+
+dockers:
+  -
+    #skip_push: false
+    ids:
+    - ministream
+    - generatepasswords
+    use: buildx
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v2"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v2"
+    dockerfile: Dockerfile-goreleaser
+    goos: linux
+    goarch: amd64
+    goamd64: v2
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=MINISTREAM_VERSION=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
+      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=MIT
+    extra_files:
+      - config-templates/docker/config/config.yaml
+      - config-templates/docker/data/storage/streams.json
+  -
+    #skip_push: false
+    ids:
+    - ministream
+    - generatepasswords
+    use: buildx
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v3"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v3"
+    dockerfile: Dockerfile-goreleaser
+    goos: linux
+    goarch: amd64
+    goamd64: v3
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=MINISTREAM_VERSION=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
+      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=MIT
+    extra_files:
+      - config-templates/docker/config/config.yaml
+      - config-templates/docker/data/storage/streams.json
+  -
+    #skip_push: false
+    ids:
+    - ministream
+    - generatepasswords
+    use: buildx
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-arm64-v8"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm64-v8"
+    dockerfile: Dockerfile-goreleaser
+    goos: linux
+    goarch: arm64
+    build_flag_templates:
+      - "--platform=linux/arm64/v8"
+      - "--build-arg=MINISTREAM_VERSION=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
+      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=MIT
+    extra_files:
+      - config-templates/docker/config/config.yaml
+      - config-templates/docker/data/storage/streams.json
+  -
+    #skip_push: false
+    ids:
+    - ministream
+    - generatepasswords
+    use: buildx
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-arm-v7"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm-v7"
+    dockerfile: Dockerfile-goreleaser
+    goos: linux
+    goarch: arm
+    goarm: 7
+    build_flag_templates:
+      - "--platform=linux/arm/v7"
+      - "--build-arg=MINISTREAM_VERSION=v{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
+      - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
+      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=MIT
+    extra_files:
+      - config-templates/docker/config/config.yaml
+      - config-templates/docker/data/storage/streams.json
+
+docker_manifests:
+  # https://goreleaser.com/customization/docker_manifest/
+  - name_template: "nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v2"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v3"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm64-v8"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm-v7"
+    #skip_push: false
+  - name_template: "nbigot/{{ .ProjectName }}:latest"
+    image_templates:
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v2"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v3"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-arm64-v8"
+      - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-arm-v7"
+    #skip_push: false
 
 changelog:
   # Set it to true if you wish to skip the changelog generation.

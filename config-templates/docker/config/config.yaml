@@ -95,7 +95,7 @@ webserver:
         aud: "ministream"
     http:
         enable: true
-        address: "0.0.0.0:80"
+        address: "0.0.0.0:8080"
     https:
         enable: false
         address: "0.0.0.0:443"

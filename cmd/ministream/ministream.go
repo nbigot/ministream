@@ -13,6 +13,7 @@ import (
 	"github.com/nbigot/ministream/startup"
 	"github.com/nbigot/ministream/stream"
 	"github.com/nbigot/ministream/web"
+	"go.uber.org/zap"
 )
 
 // This variable is set at compile time with ldflags arg
@@ -49,6 +50,11 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	log.Logger.Info(
+		"Server version",
+		zap.String("topic", "server"),
+		zap.String("version", Version),
+	)
 	if err := startup.Start(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

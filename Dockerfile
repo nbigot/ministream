@@ -15,4 +15,5 @@ COPY config-templates/docker/config /app/config
 COPY config-templates/docker/certs /app/certs
 COPY config-templates/docker/data /app/data
 EXPOSE 8080/tcp
+HEALTHCHECK CMD curl -f http://localhost:8080/api/v1/utils/ping || exit 1
 CMD ["/app/ministream", "-config", "/app/config/config.yaml"]

@@ -35,7 +35,7 @@ $ go build cmd/ministream/ministream.go
 
 ### Configure
 
-Edit the file *config-templates/docker-minimal/config/config.yaml*
+Edit the file *config-templates/docker/config/config.yaml*
 
 Pay attention to the directory paths in the config file.
 
@@ -43,7 +43,7 @@ Pay attention to the directory paths in the config file.
 ### Run ministream
 
 ```sh
-$ ministream -config config-templates/docker-minimal/config/config.yaml
+$ ministream -config config-templates/docker/config/config.yaml
 ```
 
 
