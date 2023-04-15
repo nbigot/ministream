@@ -165,14 +165,14 @@ dockers:
 
 docker_manifests:
   # https://goreleaser.com/customization/docker_manifest/
-  - name_template: "nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
+  - name_template: "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}"
     image_templates:
       - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v2"
       - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-amd64-v3"
       - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm64-v8"
       - "ghcr.io/nbigot/{{ .ProjectName }}:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-linux-arm-v7"
     #skip_push: false
-  - name_template: "nbigot/{{ .ProjectName }}:latest"
+  - name_template: "ghcr.io/nbigot/{{ .ProjectName }}:latest"
     image_templates:
       - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v2"
       - "ghcr.io/nbigot/{{ .ProjectName }}:latest-linux-amd64-v3"
