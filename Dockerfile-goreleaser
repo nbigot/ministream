@@ -1,5 +1,5 @@
 FROM alpine:3.17
-#RUN apk --no-cache add curl
+RUN apk --no-cache add curl
 WORKDIR /app
 RUN mkdir -p /app/config /app/certs /app/data/secrets /app/data/streams
 COPY config-templates/docker/config/config.yaml /app/config/config.yaml
@@ -7,5 +7,5 @@ COPY config-templates/docker/data/storage/streams.json /app/data/storage/streams
 COPY ministream /app/ministream
 COPY generatepasswords /app/generatepasswords
 EXPOSE 8080/tcp
-#HEALTHCHECK CMD curl -f http://localhost:8080/api/v1/utils/ping || exit 1
+HEALTHCHECK CMD curl -f http://localhost:8080/api/v1/utils/ping || exit 1
 CMD ["/app/ministream", "-config", "/app/config/config.yaml"]

@@ -76,7 +76,7 @@ dockers:
       - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
-      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.created={{ .Date }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
       - --label=org.opencontainers.image.licenses=MIT
     extra_files:
@@ -103,7 +103,7 @@ dockers:
       - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
-      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.created={{ .Date }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
       - --label=org.opencontainers.image.licenses=MIT
     extra_files:
@@ -129,7 +129,7 @@ dockers:
       - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
-      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.created={{ .Date }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
       - --label=org.opencontainers.image.licenses=MIT
     extra_files:
@@ -156,7 +156,7 @@ dockers:
       - --label=org.opencontainers.image.url=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.source=https://github.com/nbigot/ministream
       - --label=org.opencontainers.image.version={{ .Major }}.{{ .Minor }}.{{ .Patch }}
-      - --label=org.opencontainers.image.created={{ .CommitTimestamp }}
+      - --label=org.opencontainers.image.created={{ .Date }}
       - --label=org.opencontainers.image.revision={{ .FullCommit }}
       - --label=org.opencontainers.image.licenses=MIT
     extra_files:
