@@ -4,6 +4,14 @@
 [![license](https://img.shields.io/github/license/nbigot/ministream)](https://github.com/nbigot/ministream/blob/main/LICENSE)
 
 
+<p align="center">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/content/assets/img/ministream.logo-dark.small.png">
+      <source media="(prefers-color-scheme: light)" srcset="docs/content/assets/img/ministream.logo.small.png">
+      <img alt="Ministream" title="Ministream" src="docs/content/assets/img/ministream.logo.png">
+    </picture>
+</p>
+
 ## Overview
 
 Ministream is an open-source real-time data stream service.
