@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/nbigot/ministream/account"
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/stream"
@@ -28,9 +27,9 @@ type GetAccountHTTPJsonResult struct {
 // @Accept json
 // @Produce json
 // @Tags Account
-// @success 200 {object} web.JSONResult{data=web.GetAccountHTTPJsonResult{accountSettings=account.AccountSettings}} "successful operation"
+// @success 200 {object} web.JSONResult{data=web.GetAccountHTTPJsonResult{}} "successful operation"
 // @Router /api/v1/account [get]
-func GetAccount(c *fiber.Ctx) error {
+func (w *WebAPIServer) GetAccount(c *fiber.Ctx) error {
 	// hide field secretAPIKey
 	account := account.AccountMgr.GetAccount()
 	return c.JSON(
@@ -54,8 +53,8 @@ func GetAccount(c *fiber.Ctx) error {
 // @Failure 400 {object} apierror.APIError
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/account/validate [get]
-func ValidateApiKey(c *fiber.Ctx) error {
-	if !config.Configuration.WebServer.JWT.Enable {
+func (w *WebAPIServer) ValidateApiKey(c *fiber.Ctx) error {
+	if !w.appConfig.WebServer.JWT.Enable {
 		// JWT is not enabled in the configuration
 		httpError := apierror.APIError{
 			Message:  "bad Request",
@@ -119,8 +118,8 @@ func ValidateApiKey(c *fiber.Ctx) error {
 // @Failure 400 {object} apierror.APIError
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/account/login [get]
-func LoginAccount(c *fiber.Ctx) error {
-	if !config.Configuration.WebServer.JWT.Enable {
+func (w *WebAPIServer) LoginAccount(c *fiber.Ctx) error {
+	if !w.appConfig.WebServer.JWT.Enable {
 		// JWT is not enabled in the configuration
 		httpError := apierror.APIError{
 			Message:  "bad Request",
@@ -142,7 +141,7 @@ func LoginAccount(c *fiber.Ctx) error {
 	var err error = nil
 	var claims *jwt.MapClaims = nil
 	if apiKey == account.SecretAPIKey {
-		success, token, claims, _, err = GenerateJWT(accountId, true, "", "")
+		success, token, claims, _, err = GenerateJWT(true, "", "")
 	}
 
 	if !success || err != nil {

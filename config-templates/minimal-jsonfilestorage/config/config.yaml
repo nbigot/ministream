@@ -93,6 +93,7 @@ webserver:
         iss: "ministream"
         sub: "auth"
         aud: "ministream"
+        account: ""
     http:
         enable: true
         address: "0.0.0.0:8080"

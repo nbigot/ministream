@@ -1,8 +1,6 @@
 package web
 
 import (
-	"github.com/nbigot/ministream/stream"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -14,9 +12,9 @@ import (
 // @Produce json
 // @Tags Admin
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
-// @Router /api/v1//admin/server/shutdown [post]
-func ApiServerShutdown(c *fiber.Ctx) error {
-	StopServer()
+// @Router /api/v1/admin/server/shutdown [post]
+func (w *WebAPIServer) ApiServerShutdown(c *fiber.Ctx) error {
+	w.ShutdownServer()
 	return c.JSON(
 		JSONResultSuccess{
 			Code:    fiber.StatusOK,
@@ -25,17 +23,17 @@ func ApiServerShutdown(c *fiber.Ctx) error {
 	)
 }
 
-// ApiServerReloadAuth godoc
-// @Summary Reload server authentication configuration
-// @Description Reload server authentication configuration
-// @ID server-reload-auth
+// ApiServerRestart godoc
+// @Summary Restart server
+// @Description Restart server
+// @ID server-restart
 // @Accept json
 // @Produce json
 // @Tags Admin
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
-// @Router /api/v1//admin/server/reload/auth [post]
-func ApiServerReloadAuth(c *fiber.Ctx) error {
-	stream.LoadServerAuthConfig()
+// @Router /api/v1/admin/server/restart [post]
+func (w *WebAPIServer) ApiServerRestart(c *fiber.Ctx) error {
+	w.RestartServer()
 	return c.JSON(
 		JSONResultSuccess{
 			Code:    fiber.StatusOK,
@@ -52,8 +50,8 @@ func ApiServerReloadAuth(c *fiber.Ctx) error {
 // @Produce json
 // @Tags Admin
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
-// @Router /api/v1//admin/jwt/revoke [post]
-func ActionJWTRevokeAll(c *fiber.Ctx) error {
+// @Router /api/v1/admin/jwt/revoke [post]
+func (w *WebAPIServer) ActionJWTRevokeAll(c *fiber.Ctx) error {
 	JWTRevokeAll()
 	return c.JSON(
 		JSONResultSuccess{

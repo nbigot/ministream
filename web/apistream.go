@@ -10,11 +10,9 @@ import (
 	"time"
 
 	"github.com/nbigot/ministream/account"
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/rbac"
-	"github.com/nbigot/ministream/service"
 	"github.com/nbigot/ministream/stream"
 	"github.com/nbigot/ministream/types"
 	"github.com/nbigot/ministream/web/apierror"
@@ -37,7 +35,7 @@ import (
 // @Success 200 {array} types.StreamUUID "successful operation"
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/streams [get]
-func ListStreams(c *fiber.Ctx) error {
+func (w *WebAPIServer) ListStreams(c *fiber.Ctx) error {
 	var jq *gojq.Query
 	var err error
 
@@ -61,13 +59,14 @@ func ListStreams(c *fiber.Ctx) error {
 	}
 
 	var streamsUUIDs types.StreamUUIDList
+	var svc = w.service
 	if jq == nil && abac == nil {
-		streamsUUIDs = service.StreamService.GetStreamsUUIDs()
+		streamsUUIDs = svc.GetStreamsUUIDs()
 	} else {
 		if abac == nil {
-			streamsUUIDs = service.StreamService.GetStreamsUUIDsFiltered(jq)
+			streamsUUIDs = svc.GetStreamsUUIDsFiltered(jq)
 		} else {
-			streamsUUIDs = service.StreamService.GetStreamsUUIDsFiltered(jq, abac.JqFilter)
+			streamsUUIDs = svc.GetStreamsUUIDsFiltered(jq, abac.JqFilter)
 		}
 	}
 
@@ -85,7 +84,7 @@ func ListStreams(c *fiber.Ctx) error {
 // @Success 200 {object} web.JSONResultListStreamsProperties "successful operation"
 // @Failure 403 {object} apierror.APIError
 // @Router /api/v1/streams/properties [get]
-func ListStreamsProperties(c *fiber.Ctx) error {
+func (w *WebAPIServer) ListStreamsProperties(c *fiber.Ctx) error {
 	if jq, err := getJQFromString(c.Query("jq")); err != nil {
 		vErr := apierror.ValidationError{FailedField: "jq", Tag: "JQ", Value: c.Query("jq")}
 		httpError := apierror.APIError{
@@ -105,9 +104,9 @@ func ListStreamsProperties(c *fiber.Ctx) error {
 			abac = abacCtx.(*rbac.ABAC)
 		}
 		if abac == nil {
-			rows = service.StreamService.GetStreamsFiltered(jq)
+			rows = w.service.GetStreamsFiltered(jq)
 		} else {
-			rows = service.StreamService.GetStreamsFiltered(jq, abac.JqFilter)
+			rows = w.service.GetStreamsFiltered(jq, abac.JqFilter)
 		}
 		res := convertStreamListToJsonResult(rows)
 		return c.JSON(res)
@@ -124,7 +123,7 @@ func ListStreamsProperties(c *fiber.Ctx) error {
 // @Success 201 {array} types.StreamInfo
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream [post]
-func CreateStream(c *fiber.Ctx) error {
+func (w *WebAPIServer) CreateStream(c *fiber.Ctx) error {
 	payload := struct {
 		Properties map[string]string `json:"properties" validate:"required,lte=32,dive,keys,gt=0,lte=64,endkeys,max=128,required"`
 	}{}
@@ -133,7 +132,7 @@ func CreateStream(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	s, err := service.StreamService.CreateStream(convertToProperties(payload.Properties))
+	s, err := w.service.CreateStream(convertToProperties(payload.Properties))
 	if err != nil {
 		httpError := apierror.APIError{
 			Message:  "cannot create stream",
@@ -170,7 +169,7 @@ func CreateStream(c *fiber.Ctx) error {
 // @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [post]
-func SetStreamProperties(c *fiber.Ctx) error {
+func (w *WebAPIServer) SetStreamProperties(c *fiber.Ctx) error {
 	payload := struct {
 		Properties map[string]string `json:"properties" validate:"required,lte=32,dive,keys,gt=0,lte=64,endkeys,max=256,required"`
 	}{}
@@ -179,7 +178,7 @@ func SetStreamProperties(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	_, streamPtr, apiErr2 := GetStreamFromParameter(c)
+	_, streamPtr, apiErr2 := w.GetStreamFromParameter(c)
 	if apiErr2 != nil {
 		return apiErr2.HTTPResponse(c)
 	}
@@ -199,7 +198,7 @@ func SetStreamProperties(c *fiber.Ctx) error {
 // @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [patch]
-func UpdateStreamProperties(c *fiber.Ctx) error {
+func (w *WebAPIServer) UpdateStreamProperties(c *fiber.Ctx) error {
 	payload := struct {
 		Properties map[string]string `json:"properties" validate:"required,lte=32,dive,keys,gt=0,lte=64,endkeys,max=256,required"`
 	}{}
@@ -208,7 +207,7 @@ func UpdateStreamProperties(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	_, streamPtr, apiErr2 := GetStreamFromParameter(c)
+	_, streamPtr, apiErr2 := w.GetStreamFromParameter(c)
 	if apiErr2 != nil {
 		return apiErr2.HTTPResponse(c)
 	}
@@ -228,8 +227,8 @@ func UpdateStreamProperties(c *fiber.Ctx) error {
 // @Success 200 {object} types.StreamProperties "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/properties [get]
-func GetStreamProperties(c *fiber.Ctx) error {
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) GetStreamProperties(c *fiber.Ctx) error {
+	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -248,13 +247,13 @@ func GetStreamProperties(c *fiber.Ctx) error {
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid} [delete]
-func DeleteStream(c *fiber.Ctx) error {
-	streamUUID, _, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) DeleteStream(c *fiber.Ctx) error {
+	streamUUID, _, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
 
-	err := service.StreamService.DeleteStream(streamUUID)
+	err := w.service.DeleteStream(streamUUID)
 	if err != nil {
 		httpError := apierror.APIError{
 			Message:  "cannot delete stream",
@@ -296,8 +295,8 @@ func DeleteStream(c *fiber.Ctx) error {
 // @Success 200 {object} types.StreamInfo
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid} [get]
-func GetStreamInformation(c *fiber.Ctx) error {
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) GetStreamInformation(c *fiber.Ctx) error {
+	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -316,7 +315,7 @@ func GetStreamInformation(c *fiber.Ctx) error {
 // @Success 200 {object} stream.CreateRecordsIteratorResponse
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/iterator [post]
-func CreateRecordsIterator(c *fiber.Ctx) error {
+func (w *WebAPIServer) CreateRecordsIterator(c *fiber.Ctx) error {
 	var err error
 	var apiError *apierror.APIError
 	var streamPtr *stream.Stream
@@ -339,12 +338,12 @@ func CreateRecordsIterator(c *fiber.Ctx) error {
 		return apiError.HTTPResponse(c)
 	}
 
-	streamUUID, streamPtr, apiError = GetStreamFromParameter(c)
+	streamUUID, streamPtr, apiError = w.GetStreamFromParameter(c)
 	if apiError != nil {
 		return apiError.HTTPResponse(c)
 	}
 
-	iteratorUUID, apiError = service.StreamService.CreateRecordsIterator(streamPtr, &req)
+	iteratorUUID, apiError = w.service.CreateRecordsIterator(streamPtr, &req)
 	if apiError != nil {
 		return apiError.HTTPResponse(c)
 	}
@@ -371,8 +370,8 @@ func CreateRecordsIterator(c *fiber.Ctx) error {
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/stats [get]
-func GetRecordsIteratorStats(c *fiber.Ctx) error {
-	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) GetRecordsIteratorStats(c *fiber.Ctx) error {
+	streamUUID, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -430,8 +429,8 @@ func GetRecordsIteratorStats(c *fiber.Ctx) error {
 // @Success 200 {object} stream.CloseRecordsIteratorResponse "successful operation"
 // @Success 400 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid} [delete]
-func CloseRecordsIterator(c *fiber.Ctx) error {
-	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) CloseRecordsIterator(c *fiber.Ctx) error {
+	streamUUID, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -496,8 +495,8 @@ func CloseRecordsIterator(c *fiber.Ctx) error {
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/iterator/{streamiteratoruuid}/records [get]
-func GetRecords(c *fiber.Ctx) error {
-	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
+func (w *WebAPIServer) GetRecords(c *fiber.Ctx) error {
+	streamUUID, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -521,7 +520,7 @@ func GetRecords(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	var maxRecords uint = config.Configuration.Streams.MaxMessagePerGetOperation
+	var maxRecords uint = w.appConfig.Streams.MaxMessagePerGetOperation
 	strMaxRecords := c.Query("maxRecords")
 	if strMaxRecords != "" {
 		var maxRecordsRequested uint64
@@ -578,7 +577,7 @@ func GetRecords(c *fiber.Ctx) error {
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/record [put]
-func PutRecord(c *fiber.Ctx) error {
+func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 	startTime := time.Now()
 	payload := map[string]interface{}{}
 
@@ -593,7 +592,7 @@ func PutRecord(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -632,12 +631,12 @@ func PutRecord(c *fiber.Ctx) error {
 // @Success 400 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/{streamuuid}/records [put]
-func PutRecords(c *fiber.Ctx) error {
+func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 	var err error
 	startTime := time.Now()
 	payload := []interface{}{}
 
-	_, streamPtr, apiErr := GetStreamFromParameter(c)
+	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -710,7 +709,7 @@ func PutRecords(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(response)
 }
 
-func GetStreamUUIDFromParameter(c *fiber.Ctx) (types.StreamUUID, *apierror.APIError) {
+func (w *WebAPIServer) GetStreamUUIDFromParameter(c *fiber.Ctx) (types.StreamUUID, *apierror.APIError) {
 	streamUuid, err := uuid.Parse(c.Params("streamuuid"))
 	if err != nil {
 		// missing or invalid parameter
@@ -727,13 +726,13 @@ func GetStreamUUIDFromParameter(c *fiber.Ctx) (types.StreamUUID, *apierror.APIEr
 	return streamUuid, nil
 }
 
-func GetStreamFromParameter(c *fiber.Ctx) (types.StreamUUID, *stream.Stream, *apierror.APIError) {
-	streamUuid, err := GetStreamUUIDFromParameter(c)
+func (w *WebAPIServer) GetStreamFromParameter(c *fiber.Ctx) (types.StreamUUID, *stream.Stream, *apierror.APIError) {
+	streamUuid, err := w.GetStreamUUIDFromParameter(c)
 	if err != nil {
 		return streamUuid, nil, err
 	}
 
-	streamPtr := service.StreamService.GetStream(streamUuid)
+	streamPtr := w.service.GetStream(streamUuid)
 	if streamPtr == nil {
 		// stream uuid not found among existing streams
 		vErr := apierror.ValidationError{FailedField: "streamuuid", Tag: "parameter", Value: streamUuid.String()}
@@ -760,10 +759,10 @@ func GetStreamFromParameter(c *fiber.Ctx) (types.StreamUUID, *stream.Stream, *ap
 // @Success 200 {object} stream.RebuildStreamIndexResponse
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/stream/index/{streamuuid}/rebuild [post]
-func RebuildIndex(c *fiber.Ctx) error {
+func (w *WebAPIServer) RebuildIndex(c *fiber.Ctx) error {
 	startTime := time.Now()
 
-	streamUUID, streamPtr, apiErr := GetStreamFromParameter(c)
+	streamUUID, streamPtr, apiErr := w.GetStreamFromParameter(c)
 	if apiErr != nil {
 		return apiErr.HTTPResponse(c)
 	}
@@ -780,7 +779,7 @@ func RebuildIndex(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	indexStats, err := service.StreamService.BuildIndex(streamUUID)
+	indexStats, err := w.service.BuildIndex(streamUUID)
 	if err != nil {
 		httpError := apierror.APIError{
 			Message:    "cannot rebuild stream index",

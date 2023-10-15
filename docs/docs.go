@@ -20,78 +20,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1//admin/jwt/revoke": {
-            "post": {
-                "description": "Reload server authentication configuration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Reload server authentication configuration",
-                "operationId": "server-jwt-revoke-all",
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "$ref": "#/definitions/web.JSONResultSuccess"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1//admin/server/reload/auth": {
-            "post": {
-                "description": "Reload server authentication configuration",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Reload server authentication configuration",
-                "operationId": "server-reload-auth",
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "$ref": "#/definitions/web.JSONResultSuccess"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1//admin/server/shutdown": {
-            "post": {
-                "description": "Shutdown server",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Admin"
-                ],
-                "summary": "Shutdown server",
-                "operationId": "server-shutdown",
-                "responses": {
-                    "200": {
-                        "description": "successful operation",
-                        "schema": {
-                            "$ref": "#/definitions/web.JSONResultSuccess"
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/account": {
             "get": {
                 "description": "Get account details",
@@ -118,19 +46,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "allOf": [
-                                                {
-                                                    "$ref": "#/definitions/web.GetAccountHTTPJsonResult"
-                                                },
-                                                {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "accountSettings": {
-                                                            "$ref": "#/definitions/account.AccountSettings"
-                                                        }
-                                                    }
-                                                }
-                                            ]
+                                            "$ref": "#/definitions/web.GetAccountHTTPJsonResult"
                                         }
                                     }
                                 }
@@ -173,13 +89,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -218,13 +134,85 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/jwt/revoke": {
+            "post": {
+                "description": "Reload server authentication configuration",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Reload server authentication configuration",
+                "operationId": "server-jwt-revoke-all",
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/web.JSONResultSuccess"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/server/restart": {
+            "post": {
+                "description": "Restart server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Restart server",
+                "operationId": "server-restart",
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/web.JSONResultSuccess"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/server/shutdown": {
+            "post": {
+                "description": "Shutdown server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Shutdown server",
+                "operationId": "server-shutdown",
+                "responses": {
+                    "200": {
+                        "description": "successful operation",
+                        "schema": {
+                            "$ref": "#/definitions/web.JSONResultSuccess"
                         }
                     }
                 }
@@ -257,7 +245,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -297,7 +285,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -337,7 +325,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -375,7 +363,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -415,7 +403,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -463,7 +451,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -518,13 +506,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -572,13 +560,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -618,7 +606,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -656,7 +644,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -694,7 +682,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -734,13 +722,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -780,13 +768,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -828,7 +816,7 @@ const docTemplate = `{
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -867,7 +855,7 @@ const docTemplate = `{
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -913,19 +901,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -991,7 +979,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/apierror.APIError"
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }
@@ -1020,28 +1008,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "account.AccountSettings": {
-            "type": "object",
-            "properties": {
-                "backup": {
-                    "type": "string",
-                    "example": "1 day"
-                },
-                "maxAllowedStreams": {
-                    "type": "integer",
-                    "example": 25
-                },
-                "maxConnections": {
-                    "type": "integer",
-                    "example": 50
-                },
-                "storage": {
-                    "type": "integer",
-                    "example": 5368709120
-                }
-            }
-        },
-        "apierror.APIError": {
+        "github_com_nbigot_ministream_web_apierror.APIError": {
             "type": "object",
             "properties": {
                 "code": {
@@ -1064,12 +1031,12 @@ const docTemplate = `{
                     "description": "list of errors",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/apierror.ValidationError"
+                        "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.ValidationError"
                     }
                 }
             }
         },
-        "apierror.ValidationError": {
+        "github_com_nbigot_ministream_web_apierror.ValidationError": {
             "type": "object",
             "properties": {
                 "failedField": {
@@ -1281,9 +1248,6 @@ const docTemplate = `{
         "web.GetAccountHTTPJsonResult": {
             "type": "object",
             "properties": {
-                "accountSettings": {
-                    "$ref": "#/definitions/account.AccountSettings"
-                },
                 "id": {
                     "type": "string",
                     "example": "123489e2-b483-467b-8b59-758b33981234"

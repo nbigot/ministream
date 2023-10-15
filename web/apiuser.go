@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/nbigot/ministream/account"
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/rbac"
@@ -24,7 +23,7 @@ import (
 // @Tags User
 // @Success 200 {object} web.JSONResultListUsers "successful operation"
 // @Router /api/v1/users [get]
-func ListUsers(c *fiber.Ctx) error {
+func (w *WebAPIServer) ListUsers(c *fiber.Ctx) error {
 	return c.JSON(JSONResultListUsers{Code: fiber.StatusOK, Users: rbac.RbacMgr.Rbac.GetUserList()})
 }
 
@@ -42,8 +41,8 @@ func ListUsers(c *fiber.Ctx) error {
 // @Success 403 {object} apierror.APIError
 // @Success 500 {object} apierror.APIError
 // @Router /api/v1/user/login [get]
-func LoginUser(c *fiber.Ctx) error {
-	if !config.Configuration.WebServer.JWT.Enable {
+func (w *WebAPIServer) LoginUser(c *fiber.Ctx) error {
+	if !w.appConfig.WebServer.JWT.Enable {
 		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "JWT is not enabled on server",
@@ -53,7 +52,7 @@ func LoginUser(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	if !config.Configuration.RBAC.Enable {
+	if !w.appConfig.RBAC.Enable {
 		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "RBAC is not enabled on server",
@@ -66,7 +65,7 @@ func LoginUser(c *fiber.Ctx) error {
 	accountId := account.AccountMgr.GetAccount().Id.String()
 	accessKeyId := c.Get("ACCESS-KEY-ID", "")
 	secretAccessKey := c.Get("SECRET-ACCESS-KEY", "")
-	success, token, claims, _, err := GenerateJWT(accountId, false, accessKeyId, secretAccessKey)
+	success, token, claims, _, err := GenerateJWT(false, accessKeyId, secretAccessKey)
 
 	if err != nil {
 		log.Logger.Error(

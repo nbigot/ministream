@@ -1,251 +1,121 @@
 package web
 
 import (
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/swagger"
 
 	"github.com/nbigot/ministream/auditlog"
 	"github.com/nbigot/ministream/config"
-	"github.com/nbigot/ministream/log"
 	"github.com/nbigot/ministream/rbac"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
-	"go.uber.org/zap"
+	"github.com/nbigot/ministream/service"
 )
 
-var quit chan os.Signal
-
-func GetFiberConfig() fiber.Config {
-	return fiber.Config{
-		StrictRouting:           true,
-		CaseSensitive:           true,
-		UnescapePath:            false,
-		BodyLimit:               10485760,
-		Concurrency:             262144,
-		IdleTimeout:             60000,
-		ReadBufferSize:          4096,
-		WriteBufferSize:         4096,
-		CompressedFileSuffix:    ".gz",
-		GETOnly:                 false,
-		DisableKeepalive:        false,
-		DisableStartupMessage:   true,
-		ReduceMemoryUsage:       false,
-		EnableTrustedProxyCheck: false,
-		EnablePrintRoutes:       false,
-	}
+type WebAPIServer struct {
+	service            *service.Service
+	funcShutdownServer func()
+	funcRestartServer  func()
+	app                *fiber.App
+	appConfig          *config.Config
 }
 
-func GetFiberLogger() logger.Config {
-	return logger.Config{
-		Next:         nil,
-		Format:       "[${time}] ${status} - ${ip}:${port} - ${latency} ${method} ${path}\n",
-		TimeFormat:   "2006-01-02T15:04:05-0700",
-		TimeZone:     "Local",
-		TimeInterval: 500 * time.Millisecond,
-		Output:       os.Stdout,
-	}
-}
+func (w *WebAPIServer) AddRoutes(app *fiber.App) {
+	enableRBAC := w.appConfig.RBAC.Enable
 
-func GoServer() {
-	errs := make(chan error)
-	quit = make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-
-	appMinistream := StartMinistreamServer(errs)
-	appSwagger := StartSwaggerServer(errs)
-
-	// This will run forever until channel receives error or an os signal
-	select {
-	case <-quit:
-		log.Logger.Info("Shutdown Server ...", zap.String("topic", "server"), zap.String("method", "GoServer"))
-		if err := appMinistream.Shutdown(); err != nil {
-			log.Logger.Error("Server Shutdown", zap.String("topic", "server"), zap.String("method", "GoServer"), zap.Error(err))
+	auditlogRBACHandlerLogAccessGranted := func(c *fiber.Ctx) error {
+		if !w.appConfig.AuditLog.Enable || !w.appConfig.AuditLog.EnableLogAccessGranted {
+			return c.Next()
+		} else {
+			return auditlog.RBACHandlerLogAccessGranted(c)
 		}
-		if appSwagger != nil {
-			if err := appSwagger.Shutdown(); err != nil {
-				log.Logger.Error("Server Shutdown", zap.String("topic", "server"), zap.String("method", "GoServer"), zap.Error(err))
-			}
-		}
-		log.Logger.Info("Web server stopped", zap.String("topic", "server"), zap.String("method", "GoServer"))
-		return
-
-	case err := <-errs:
-		log.Logger.Error("Web server error", zap.String("topic", "server"), zap.String("method", "GoServer"), zap.Error(err))
-		log.Logger.Info("Web server stopped", zap.String("topic", "server"), zap.String("method", "GoServer"))
-		return
 	}
-}
 
-func AddRoutes(app *fiber.App) {
+	auditlogRBACHandlerLogAccessDeny := func(c *fiber.Ctx, err error) error {
+		return auditlog.RBACHandlerLogAccessDeny(c, err, w.appConfig.AuditLog.Enable)
+	}
+
+	rateLimiterEnable := w.appConfig.WebServer.RateLimiter.Enable
+	rateLimiterMaxRequests := w.appConfig.WebServer.RateLimiter.RouteStream.MaxRequests      // max count of requests
+	rateDurationInSeconds := w.appConfig.WebServer.RateLimiter.RouteStream.DurationInSeconds // expiration time of the limit
+
 	// Optimization: order of routes registration matters for performance
 	// Please register most used routes first
 	api := app.Group("/api/v1")
 
-	apiStream := api.Group("/stream", JWTProtected(), RateLimiterStreams())
-	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/records", rbac.RBACProtected(rbac.ActionGetRecords, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetRecords)
-	apiStream.Put("/:streamuuid/records", rbac.RBACProtected(rbac.ActionPutRecords, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), PutRecords)
-	apiStream.Put("/:streamuuid/record", rbac.RBACProtected(rbac.ActionPutRecord, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), PutRecord)
-	apiStream.Post("/:streamuuid/iterator", rbac.RBACProtected(rbac.ActionCreateRecordsIterator, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CreateRecordsIterator)
-	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/stats", rbac.RBACProtected(rbac.ActionGetRecordsIteratorStats, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetRecordsIteratorStats)
-	apiStream.Delete("/:streamuuid/iterator/:streamiteratoruuid", rbac.RBACProtected(rbac.ActionCloseRecordsIterator, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CloseRecordsIterator)
-	apiStream.Get("/:streamuuid", rbac.RBACProtected(rbac.ActionGetStreamDescription, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamInformation)
-	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionGetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetStreamProperties)
-	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionSetStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), SetStreamProperties)
-	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(rbac.ActionUpdateStreamProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), UpdateStreamProperties)
-	apiStream.Post("/", rbac.RBACProtected(rbac.ActionCreateStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), CreateStream)
-	apiStream.Delete("/:streamuuid", rbac.RBACProtected(rbac.ActionDeleteStream, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), DeleteStream)
-	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(rbac.ActionRebuildIndex, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), RebuildIndex)
+	apiStream := api.Group("/stream", JWTProtected(), RateLimiterStreams(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecords, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecords)
+	apiStream.Put("/:streamuuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecords, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecords)
+	apiStream.Put("/:streamuuid/record", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecord, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecord)
+	apiStream.Post("/:streamuuid/iterator", rbac.RBACProtected(enableRBAC, rbac.ActionCreateRecordsIterator, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CreateRecordsIterator)
+	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/stats", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecordsIteratorStats, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecordsIteratorStats)
+	apiStream.Delete("/:streamuuid/iterator/:streamiteratoruuid", rbac.RBACProtected(enableRBAC, rbac.ActionCloseRecordsIterator, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CloseRecordsIterator)
+	apiStream.Get("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamDescription, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamInformation)
+	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamProperties)
+	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionSetStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.SetStreamProperties)
+	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionUpdateStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.UpdateStreamProperties)
+	apiStream.Post("/", rbac.RBACProtected(enableRBAC, rbac.ActionCreateStream, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CreateStream)
+	apiStream.Delete("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionDeleteStream, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.DeleteStream)
+	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(enableRBAC, rbac.ActionRebuildIndex, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.RebuildIndex)
 
-	apiStreams := api.Group("/streams", JWTProtected(), RateLimiterStreams())
-	apiStreams.Get("/", rbac.RBACProtected(rbac.ActionListStreams, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListStreams)
-	apiStreams.Get("/properties", rbac.RBACProtected(rbac.ActionListStreamsProperties, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListStreamsProperties)
+	apiStreams := api.Group("/streams", JWTProtected(), RateLimiterStreams(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiStreams.Get("/", rbac.RBACProtected(enableRBAC, rbac.ActionListStreams, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListStreams)
+	apiStreams.Get("/properties", rbac.RBACProtected(enableRBAC, rbac.ActionListStreamsProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListStreamsProperties)
 
-	apiUser := api.Group("/user", RateLimiterAccounts())
-	apiUser.Get("/login", LoginUser)
+	apiUser := api.Group("/user", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiUser.Get("/login", w.LoginUser)
 
-	apiUsers := api.Group("/users", RateLimiterAccounts())
-	apiUsers.Get("/", JWTProtected(), rbac.RBACProtected(rbac.ActionListUsers, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ListUsers)
+	apiUsers := api.Group("/users", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiUsers.Get("/", JWTProtected(), rbac.RBACProtected(enableRBAC, rbac.ActionListUsers, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListUsers)
 
-	apiAccount := api.Group("/account", RateLimiterAccounts())
-	apiAccount.Get("/validate", ValidateApiKey)
-	apiAccount.Get("/login", LoginAccount)
-	apiAccount.Get("/", JWTProtected(), rbac.RBACProtected(rbac.ActionGetAccount, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), GetAccount)
+	apiAccount := api.Group("/account", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiAccount.Get("/validate", w.ValidateApiKey)
+	apiAccount.Get("/login", w.LoginAccount)
+	apiAccount.Get("/", JWTProtected(), rbac.RBACProtected(enableRBAC, rbac.ActionGetAccount, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetAccount)
 
 	apiAdmin := api.Group("/admin", JWTProtected())
-	apiAdmin.Post("/server/shutdown", rbac.RBACProtected(rbac.ActionShutdownServer, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ApiServerShutdown)
-	apiAdmin.Post("/server/reload/auth", rbac.RBACProtected(rbac.ActionReloadServerAuth, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ApiServerReloadAuth)
-	apiAdmin.Post("/jwt/revoke", rbac.RBACProtected(rbac.ActionJWTRevokeAll, nil, auditlog.RBACHandlerLogAccessGranted, auditlog.RBACHandlerLogAccessDeny), ActionJWTRevokeAll)
+	apiAdmin.Post("/server/shutdown", rbac.RBACProtected(enableRBAC, rbac.ActionShutdownServer, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ApiServerShutdown)
+	apiAdmin.Post("/server/restart", rbac.RBACProtected(enableRBAC, rbac.ActionRestartServer, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ApiServerRestart)
+	apiAdmin.Post("/jwt/revoke", rbac.RBACProtected(enableRBAC, rbac.ActionJWTRevokeAll, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ActionJWTRevokeAll)
 
 	apiUtils := api.Group("/utils")
-	apiUtils.Post("/pbkdf2", RateLimiterUtils(), ApiServerUtilsPbkdf2)
-	apiUtils.Get("/ping", Ping)
+	apiUtils.Post("/pbkdf2", RateLimiterUtils(rateLimiterEnable), w.ApiServerUtilsPbkdf2)
+	apiUtils.Get("/ping", w.Ping)
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Welcome to ministream!")
 	})
 
-	if config.Configuration.WebServer.Monitor.Enable {
+	if w.appConfig.WebServer.Monitor.Enable {
 		app.Get("/monitor", monitor.New())
 	}
-}
 
-func StartMinistreamServer(errs chan error) *fiber.App {
-	// https://docs.gofiber.io/api/app
-	// https://dev.to/koddr/go-fiber-by-examples-delving-into-built-in-functions-1p3k
-	// https://dev.to/koddr/build-a-restful-api-on-go-fiber-postgresql-jwt-and-swagger-docs-in-isolated-docker-containers-475j
-	fiberconfig := GetFiberConfig()
-	app := fiber.New(fiberconfig)
+	if w.appConfig.WebServer.Swagger.Enable {
+		// Create swagger routes group.
+		apiSwagger := app.Group("/docs")
 
-	if config.Configuration.WebServer.Logs.Enable {
-		app.Use(logger.New(GetFiberLogger()))
-	}
-
-	if config.Configuration.WebServer.Cors.Enable {
-		app.Use(cors.New(cors.Config{
-			AllowOrigins: config.Configuration.WebServer.Cors.AllowOrigins,
-			AllowHeaders: config.Configuration.WebServer.Cors.AllowHeaders,
+		// Routes for GET method:
+		apiSwagger.Get("*", swagger.HandlerDefault)
+		apiSwagger.Get("*", swagger.New(swagger.Config{
+			URL:         "/swagger/doc.json",
+			DeepLinking: false,
 		}))
 	}
-
-	AddRoutes(app)
-
-	if config.Configuration.WebServer.HTTP.Enable {
-		go func() {
-			log.Logger.Info(
-				"Start HTTP web server",
-				zap.String("topic", "server"),
-				zap.String("method", "GoServer"),
-				zap.String("address", config.Configuration.WebServer.HTTP.Address),
-			)
-			if err := app.Listen(config.Configuration.WebServer.HTTP.Address); err != nil {
-				errs <- err
-			}
-		}()
-	}
-
-	if config.Configuration.WebServer.HTTPS.Enable {
-		go func() {
-			log.Logger.Info(
-				"Start HTTPS web server",
-				zap.String("topic", "server"),
-				zap.String("method", "GoServer"),
-				zap.String("address", config.Configuration.WebServer.HTTPS.Address),
-			)
-			if err := app.ListenTLS(
-				config.Configuration.WebServer.HTTPS.Address,
-				config.Configuration.WebServer.HTTPS.CertFile,
-				config.Configuration.WebServer.HTTPS.KeyFile,
-			); err != nil {
-				errs <- err
-			}
-		}()
-	}
-
-	return app
 }
 
-func StartSwaggerServer(errs chan error) *fiber.App {
-	if !config.Configuration.WebServer.Swagger.Enable {
-		return nil
-	}
-
-	fiberconfig := GetFiberConfig()
-	appSwagger := fiber.New(fiberconfig)
-	if config.Configuration.WebServer.Cors.Enable {
-		appSwagger.Use(cors.New(cors.Config{
-			AllowOrigins: config.Configuration.WebServer.Cors.AllowOrigins,
-			AllowHeaders: config.Configuration.WebServer.Cors.AllowHeaders,
-		}))
-	}
-
-	AddSwaggerRoute(appSwagger)
-
-	protocol := "http"
-	if config.Configuration.WebServer.Swagger.Https {
-		protocol = "https"
-	}
-	url := fmt.Sprintf("%s://%s/index.html", protocol, config.Configuration.WebServer.Swagger.Address)
-
-	if config.Configuration.WebServer.Swagger.Https {
-		go func() {
-			log.Logger.Info(
-				"Start Swagger HTTPS web server",
-				zap.String("topic", "server"),
-				zap.String("method", "StartSwaggerServer"),
-				zap.String("url", url),
-			)
-			if err := appSwagger.ListenTLS(
-				config.Configuration.WebServer.Swagger.Address,
-				config.Configuration.WebServer.Swagger.CertFile,
-				config.Configuration.WebServer.Swagger.KeyFile,
-			); err != nil {
-				errs <- err
-			}
-		}()
-	} else {
-		go func() {
-			log.Logger.Info(
-				"Start Swagger HTTP web server",
-				zap.String("topic", "server"),
-				zap.String("method", "StartSwaggerServer"),
-				zap.String("url", url),
-			)
-			if err := appSwagger.Listen(config.Configuration.WebServer.Swagger.Address); err != nil {
-				errs <- err
-			}
-		}()
-	}
-
-	return appSwagger
+func (w *WebAPIServer) ShutdownServer() {
+	w.funcShutdownServer()
 }
 
-func StopServer() {
-	// send signal SIGTERM
-	quit <- syscall.SIGTERM
+func (w *WebAPIServer) RestartServer() {
+	w.funcRestartServer()
+}
+
+func NewWebAPIServer(appConfig *config.Config, fiberConfig fiber.Config, service *service.Service, funcShutdownServer func(), funcRestartServer func()) *WebAPIServer {
+	return &WebAPIServer{
+		service:            service,
+		funcShutdownServer: funcShutdownServer,
+		funcRestartServer:  funcRestartServer,
+		app:                fiber.New(fiberConfig),
+		appConfig:          appConfig,
+	}
 }

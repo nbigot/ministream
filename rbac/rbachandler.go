@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/constants"
 	. "github.com/nbigot/ministream/web/apierror"
 
@@ -41,10 +40,10 @@ type RBACHandlerConfig struct {
 	Action string
 }
 
-func MakeRBACHandlerConfig(action string, abacGetPropertiesHandler func(*fiber.Ctx) (interface{}, error), successHandler func(c *fiber.Ctx) error, errorHandler func(c *fiber.Ctx, err error) error) *RBACHandlerConfig {
+func MakeRBACHandlerConfig(enableRBAC bool, action string, abacGetPropertiesHandler func(*fiber.Ctx) (interface{}, error), successHandler func(c *fiber.Ctx) error, errorHandler func(c *fiber.Ctx, err error) error) *RBACHandlerConfig {
 	cfg := RBACHandlerConfig{
 		Filter: func(c *fiber.Ctx) bool {
-			return !config.Configuration.RBAC.Enable
+			return !enableRBAC
 		},
 		SuccessHandler:           successHandler,
 		ErrorHandler:             errorHandler,
@@ -91,8 +90,8 @@ func MakeRBACHandlerConfig(action string, abacGetPropertiesHandler func(*fiber.C
 	return &cfg
 }
 
-func RBACProtected(action string, abacGetPropertiesHandler func(*fiber.Ctx) (interface{}, error), successHandler func(c *fiber.Ctx) error, errorHandler func(c *fiber.Ctx, err error) error) func(*fiber.Ctx) error {
-	return NewRBACHandler(MakeRBACHandlerConfig(action, abacGetPropertiesHandler, successHandler, errorHandler))
+func RBACProtected(enableRBAC bool, action string, abacGetPropertiesHandler func(*fiber.Ctx) (interface{}, error), successHandler func(c *fiber.Ctx) error, errorHandler func(c *fiber.Ctx, err error) error) func(*fiber.Ctx) error {
+	return NewRBACHandler(MakeRBACHandlerConfig(enableRBAC, action, abacGetPropertiesHandler, successHandler, errorHandler))
 }
 
 func NewRBACHandler(cfg *RBACHandlerConfig) fiber.Handler {

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nbigot/ministream/config"
-
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
@@ -14,14 +12,14 @@ import (
 // https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html
 // https://docs.datadoghq.com/fr/api/latest/rate-limits/
 
-func RateLimiterStreams() func(*fiber.Ctx) error {
+func RateLimiterStreams(rateLimiterEnable bool, rateLimiterMaxRequests int, rateDurationInSeconds int) func(*fiber.Ctx) error {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return !config.Configuration.WebServer.RateLimiter.Enable
+			return !rateLimiterEnable
 		},
 		SkipFailedRequests: true,
-		Max:                int(config.Configuration.WebServer.RateLimiter.RouteStream.MaxRequests),                               // max count of requests
-		Expiration:         time.Duration(config.Configuration.WebServer.RateLimiter.RouteStream.DurationInSeconds) * time.Second, // expiration time of the limit
+		Max:                rateLimiterMaxRequests,                             // max count of requests
+		Expiration:         time.Duration(rateDurationInSeconds) * time.Second, // expiration time of the limit
 		//LimiterMiddleware:  limiter.SlidingWindow{},
 		KeyGenerator: func(c *fiber.Ctx) string {
 			// Handle multiple accounts and connections: each account has it's own rate limit keys
@@ -45,14 +43,14 @@ func RateLimiterStreams() func(*fiber.Ctx) error {
 	})
 }
 
-func RateLimiterJobs() func(*fiber.Ctx) error {
+func RateLimiterJobs(rateLimiterEnable bool, rateLimiterMaxRequests int, rateDurationInSeconds int) func(*fiber.Ctx) error {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return !config.Configuration.WebServer.RateLimiter.Enable
+			return !rateLimiterEnable
 		},
 		SkipFailedRequests: true,
-		Max:                int(config.Configuration.WebServer.RateLimiter.RouteAccount.MaxRequests),                               // max count of requests
-		Expiration:         time.Duration(config.Configuration.WebServer.RateLimiter.RouteAccount.DurationInSeconds) * time.Second, // expiration time of the limit
+		Max:                rateLimiterMaxRequests,                             // max count of requests
+		Expiration:         time.Duration(rateDurationInSeconds) * time.Second, // expiration time of the limit
 		KeyGenerator: func(c *fiber.Ctx) string {
 			// get account uuid from JWT (if exists)
 			accountId, err := GetJWTClaim(c, "account")
@@ -66,14 +64,14 @@ func RateLimiterJobs() func(*fiber.Ctx) error {
 	})
 }
 
-func RateLimiterAccounts() func(*fiber.Ctx) error {
+func RateLimiterAccounts(rateLimiterEnable bool, rateLimiterMaxRequests int, rateDurationInSeconds int) func(*fiber.Ctx) error {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return !config.Configuration.WebServer.RateLimiter.Enable
+			return !rateLimiterEnable
 		},
 		SkipFailedRequests: true,
-		Max:                int(config.Configuration.WebServer.RateLimiter.RouteAccount.MaxRequests),                               // max count of requests
-		Expiration:         time.Duration(config.Configuration.WebServer.RateLimiter.RouteAccount.DurationInSeconds) * time.Second, // expiration time of the limit
+		Max:                rateLimiterMaxRequests,                             // max count of requests
+		Expiration:         time.Duration(rateDurationInSeconds) * time.Second, // expiration time of the limit
 		KeyGenerator: func(c *fiber.Ctx) string {
 			// get account uuid from JWT (if exists)
 			accountId, err := GetJWTClaim(c, "account")
@@ -87,10 +85,10 @@ func RateLimiterAccounts() func(*fiber.Ctx) error {
 	})
 }
 
-func RateLimiterUtils() func(*fiber.Ctx) error {
+func RateLimiterUtils(rateLimiterEnable bool) func(*fiber.Ctx) error {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return !config.Configuration.WebServer.RateLimiter.Enable
+			return !rateLimiterEnable
 		},
 		SkipFailedRequests: true,
 		Max:                5,           // max count of connections

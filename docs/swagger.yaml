@@ -1,21 +1,6 @@
 basePath: /
 definitions:
-  account.AccountSettings:
-    properties:
-      backup:
-        example: 1 day
-        type: string
-      maxAllowedStreams:
-        example: 25
-        type: integer
-      maxConnections:
-        example: 50
-        type: integer
-      storage:
-        example: 5368709120
-        type: integer
-    type: object
-  apierror.APIError:
+  github_com_nbigot_ministream_web_apierror.APIError:
     properties:
       code:
         description: application-specific error code
@@ -33,10 +18,10 @@ definitions:
       validationErrors:
         description: list of errors
         items:
-          $ref: '#/definitions/apierror.ValidationError'
+          $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.ValidationError'
         type: array
     type: object
-  apierror.ValidationError:
+  github_com_nbigot_ministream_web_apierror.ValidationError:
     properties:
       failedField:
         type: string
@@ -176,8 +161,6 @@ definitions:
     type: object
   web.GetAccountHTTPJsonResult:
     properties:
-      accountSettings:
-        $ref: '#/definitions/account.AccountSettings'
       id:
         example: 123489e2-b483-467b-8b59-758b33981234
         type: string
@@ -299,54 +282,6 @@ info:
   title: MiniStream API
   version: "1.0"
 paths:
-  /api/v1//admin/jwt/revoke:
-    post:
-      consumes:
-      - application/json
-      description: Reload server authentication configuration
-      operationId: server-jwt-revoke-all
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            $ref: '#/definitions/web.JSONResultSuccess'
-      summary: Reload server authentication configuration
-      tags:
-      - Admin
-  /api/v1//admin/server/reload/auth:
-    post:
-      consumes:
-      - application/json
-      description: Reload server authentication configuration
-      operationId: server-reload-auth
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            $ref: '#/definitions/web.JSONResultSuccess'
-      summary: Reload server authentication configuration
-      tags:
-      - Admin
-  /api/v1//admin/server/shutdown:
-    post:
-      consumes:
-      - application/json
-      description: Shutdown server
-      operationId: server-shutdown
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: successful operation
-          schema:
-            $ref: '#/definitions/web.JSONResultSuccess'
-      summary: Shutdown server
-      tags:
-      - Admin
   /api/v1/account:
     get:
       consumes:
@@ -363,12 +298,7 @@ paths:
             - $ref: '#/definitions/web.JSONResult'
             - properties:
                 data:
-                  allOf:
-                  - $ref: '#/definitions/web.GetAccountHTTPJsonResult'
-                  - properties:
-                      accountSettings:
-                        $ref: '#/definitions/account.AccountSettings'
-                    type: object
+                  $ref: '#/definitions/web.GetAccountHTTPJsonResult'
               type: object
       summary: Get account
       tags:
@@ -395,11 +325,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Account login
       tags:
       - Account
@@ -425,14 +355,62 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Validate API Key
       tags:
       - Account
+  /api/v1/admin/jwt/revoke:
+    post:
+      consumes:
+      - application/json
+      description: Reload server authentication configuration
+      operationId: server-jwt-revoke-all
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Reload server authentication configuration
+      tags:
+      - Admin
+  /api/v1/admin/server/restart:
+    post:
+      consumes:
+      - application/json
+      description: Restart server
+      operationId: server-restart
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Restart server
+      tags:
+      - Admin
+  /api/v1/admin/server/shutdown:
+    post:
+      consumes:
+      - application/json
+      description: Shutdown server
+      operationId: server-shutdown
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: successful operation
+          schema:
+            $ref: '#/definitions/web.JSONResultSuccess'
+      summary: Shutdown server
+      tags:
+      - Admin
   /api/v1/stream:
     post:
       consumes:
@@ -451,7 +429,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Create a stream
       tags:
       - Stream
@@ -478,7 +456,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Delete a stream
       tags:
       - Stream
@@ -504,7 +482,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Get stream information
       tags:
       - Stream
@@ -532,7 +510,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Create stream records iterator
       tags:
       - Stream
@@ -565,7 +543,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Close a stream records iterator
       tags:
       - Stream
@@ -603,11 +581,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Get stream records
       tags:
       - Stream
@@ -641,11 +619,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Get statistics about a stream records iterator
       tags:
       - Stream
@@ -672,7 +650,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Get stream properties
       tags:
       - Stream
@@ -698,7 +676,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Update stream properties
       tags:
       - Stream
@@ -724,7 +702,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Set stream properties
       tags:
       - Stream
@@ -751,11 +729,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Put one record into a stream
       tags:
       - Stream
@@ -782,11 +760,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Put one or multiple records into a stream
       tags:
       - Stream
@@ -813,7 +791,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Rebuild the stream index
       tags:
       - Stream
@@ -841,7 +819,7 @@ paths:
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: List streams
       tags:
       - Stream
@@ -867,7 +845,7 @@ paths:
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: List streams properties
       tags:
       - Stream
@@ -898,15 +876,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Logs user into the system
       tags:
       - User
@@ -950,7 +928,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/apierror.APIError'
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: Generate hash from password
       tags:
       - Utils

@@ -12,23 +12,32 @@ type RBACManager struct {
 	Logger     *zap.Logger
 	ActionList []string
 	Rbac       *RBAC
+	enabled    bool
 }
 
 var (
 	RbacMgr RBACManager
 )
 
-func (m *RBACManager) Initialize(logger *zap.Logger, actionList []string, filename string) error {
+func (m *RBACManager) Initialize(logger *zap.Logger, enable bool, actionList []string, filename string) error {
+	m.enabled = enable
 	m.Logger = logger
-	m.ActionList = actionList
-	return m.LoadRBAC(filename)
+
+	if m.enabled {
+		m.ActionList = actionList
+		return m.LoadConfiguration(filename)
+	} else {
+		m.ActionList = make([]string, 0)
+		m.Rbac = nil
+		return nil
+	}
 }
 
-func (m *RBACManager) LoadRBAC(filename string) error {
+func (m *RBACManager) LoadConfiguration(filename string) error {
 	m.Logger.Info(
 		"Loading RBAC",
-		zap.String("topic", "server"),
-		zap.String("method", "LoadRBAC"),
+		zap.String("topic", "rbac"),
+		zap.String("method", "LoadConfiguration"),
 		zap.String("filename", filename),
 	)
 
@@ -36,8 +45,8 @@ func (m *RBACManager) LoadRBAC(filename string) error {
 	if err != nil {
 		m.Logger.Fatal(
 			"Can't open RBAC file",
-			zap.String("topic", "server"),
-			zap.String("method", "LoadRBAC"),
+			zap.String("topic", "rbac"),
+			zap.String("method", "LoadConfiguration"),
 			zap.String("filename", filename),
 			zap.Error(err),
 		)
@@ -51,8 +60,8 @@ func (m *RBACManager) LoadRBAC(filename string) error {
 	if err != nil {
 		m.Logger.Fatal(
 			"Can't decode json RBAC",
-			zap.String("topic", "server"),
-			zap.String("method", "LoadRBAC"),
+			zap.String("topic", "rbac"),
+			zap.String("method", "LoadConfiguration"),
 			zap.String("filename", filename),
 			zap.Error(err),
 		)
@@ -121,10 +130,18 @@ func (m *RBACManager) DeserializeRBACConfig(s *RBACSerializeStruct) (*RBAC, erro
 }
 
 func (m *RBACManager) IsValidAction(action string) bool {
+	if m.enabled == false {
+		return true
+	}
+
 	for _, actionName := range m.ActionList {
 		if action == actionName {
 			return true
 		}
 	}
 	return false
+}
+
+func (m *RBACManager) IsEnabled() bool {
+	return m.enabled
 }
