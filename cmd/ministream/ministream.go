@@ -109,7 +109,9 @@ func RunServer() (bool, error) {
 
 	defer func() {
 		if apiServer.GetStatus() == webserver.ServerStatusRunning {
-			apiServer.Shutdown()
+			if shutdownErr := apiServer.Shutdown(); shutdownErr != nil {
+				log.Logger.Error("Server shutdown with error", zap.String("topic", "server"), zap.Error(shutdownErr))
+			}
 		}
 	}()
 
@@ -124,7 +126,6 @@ func RunServer() (bool, error) {
 		log.Logger.Error("Server stopped with error", zap.String("topic", "server"))
 		return false, err
 	}
-
 }
 
 // @title MiniStream API

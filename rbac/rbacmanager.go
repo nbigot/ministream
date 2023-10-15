@@ -130,7 +130,7 @@ func (m *RBACManager) DeserializeRBACConfig(s *RBACSerializeStruct) (*RBAC, erro
 }
 
 func (m *RBACManager) IsValidAction(action string) bool {
-	if m.enabled == false {
+	if !m.enabled {
 		return true
 	}
 
