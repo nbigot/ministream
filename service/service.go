@@ -294,6 +294,10 @@ func (svc *Service) BuildIndex(streamUUID StreamUUID) (interface{}, error) {
 	return svc.sp.BuildIndex(streamUUID)
 }
 
+func (svc *Service) Finalize() {
+	svc.Stop()
+}
+
 func (svc *Service) Stop() {
 	svc.mapMutex.RLock()
 	defer svc.mapMutex.RUnlock()
@@ -361,7 +365,7 @@ func NewService(conf *config.Config) *Service {
 }
 
 func NewStreamService(logger *zap.Logger, conf *config.Config) (*Service, error) {
-	sp, err := registry.NewStorageProvider(logger, conf)
+	sp, err := registry.NewStorageProvider(conf)
 	if err != nil {
 		return nil, err
 	}

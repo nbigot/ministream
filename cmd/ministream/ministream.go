@@ -13,9 +13,9 @@ import (
 	"github.com/nbigot/ministream/auth"
 	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/log"
+	"github.com/nbigot/ministream/rbac"
 	"github.com/nbigot/ministream/service"
-	"github.com/nbigot/ministream/startup"
-	"github.com/nbigot/ministream/stream"
+	"github.com/nbigot/ministream/storageprovider/registry"
 	"github.com/nbigot/ministream/web"
 	"github.com/nbigot/ministream/web/webserver"
 	"go.uber.org/zap"
@@ -28,7 +28,7 @@ import (
 //	$ go build -ldflags="-X 'main.Version=v1.0.0'" cmd/ministream/ministream.go
 var Version = "v0.0.0"
 
-func argparse() {
+func argparse() string {
 	showVersion := flag.Bool("version", false, "Show version")
 	configFilePath := flag.String("config", "config.yaml", "Filepath to config.yaml")
 	flag.Parse()
@@ -38,7 +38,7 @@ func argparse() {
 		os.Exit(0)
 	}
 
-	config.ConfigFile = *configFilePath
+	return *configFilePath
 }
 
 func WithFiberLogger() webserver.ServerOption {
@@ -66,37 +66,49 @@ func WithAPIRoutes() webserver.ServerOption {
 	}
 }
 
-func RunServer() (bool, error) {
+func RunServer(appConfig *config.Config) (bool, error) {
 	var err error
-	var appConfig *config.Config
 	var apiServer *webserver.Server
 
-	if appConfig, err = config.LoadConfig(config.ConfigFile); err != nil {
-		fmt.Println(err)
-		return false, err
-	}
 	log.Logger.Info(
 		"Server version",
 		zap.String("topic", "server"),
 		zap.String("version", Version),
 	)
-	if err = startup.Start(appConfig); err != nil {
-		log.Logger.Error("Startup error", zap.String("topic", "startup"), zap.Error(err))
-		fmt.Println(err)
+
+	if !appConfig.Auth.Enable && (appConfig.RBAC.Enable || appConfig.WebServer.JWT.Enable) {
+		log.Logger.Warn(
+			"Auth is disabled in configuration",
+			zap.String("topic", "server"),
+		)
+	}
+
+	web.JWTMgr.Initialize(appConfig.WebServer.JWT)
+	defer web.JWTMgr.Finalize()
+
+	if err = registry.Initialize(); err != nil {
+		log.Logger.Error("Startup error", zap.String("topic", "storage providers"), zap.Error(err))
 		return false, err
 	}
+	defer registry.Finalize()
+
 	if err = account.AccountMgr.Initialize(log.Logger, &appConfig.Account); err != nil {
 		log.Logger.Error("Cannot initialize account manager", zap.String("topic", "account manager"), zap.Error(err))
 		return false, err
 	}
+	defer account.AccountMgr.Finalize()
+
 	if err = auth.AuthMgr.Initialize(log.Logger, &appConfig.Auth); err != nil {
 		log.Logger.Error("Cannot initialize authentication manager", zap.String("topic", "auth manager"), zap.Error(err))
 		return false, err
 	}
-	stream.LoadServerAuthConfig(appConfig.RBAC.Enable, appConfig.RBAC.Filename)
+	defer auth.AuthMgr.Finalize()
+
+	rbac.RbacMgr = rbac.NewRBACManager(log.Logger, appConfig.RBAC.Enable, appConfig.RBAC.Filename)
+	defer rbac.RbacMgr.Finalize()
 
 	service := service.NewService(appConfig)
-	defer service.Stop()
+	defer service.Finalize()
 
 	// create api server
 	apiServer = webserver.NewServer(log.Logger, web.GetFiberConfig(), appConfig, service)
@@ -104,16 +116,8 @@ func RunServer() (bool, error) {
 		log.Logger.Error("Cannot initialize server", zap.String("topic", "server"), zap.Error(err))
 		return false, err
 	}
-
+	defer apiServer.Finalize()
 	err = apiServer.Start()
-
-	defer func() {
-		if apiServer.GetStatus() == webserver.ServerStatusRunning {
-			if shutdownErr := apiServer.Shutdown(); shutdownErr != nil {
-				log.Logger.Error("Server shutdown with error", zap.String("topic", "server"), zap.Error(shutdownErr))
-			}
-		}
-	}()
 
 	switch {
 	case err == nil:
@@ -137,11 +141,18 @@ func RunServer() (bool, error) {
 // @BasePath /
 func main() {
 	// 127.0.0.1:443
-	argparse()
+	configFilePath := argparse()
 
 	// start/restart the server forever (reason is reload config) unless an error occurs
 	for {
-		restartServer, serverErr := RunServer()
+		var appConfig *config.Config
+		var err error
+		if appConfig, err = config.LoadConfig(configFilePath); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		restartServer, serverErr := RunServer(appConfig)
 		if !restartServer || serverErr != nil {
 			log.Logger.Info("End program", zap.String("topic", "server"))
 			os.Exit(0)

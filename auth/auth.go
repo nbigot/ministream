@@ -22,9 +22,14 @@ type AuthManager struct {
 var AuthMgr AuthManager
 
 func (m *AuthManager) init() {
-	m.enable = true
+	m.enable = false
 	m.methodName = ""
 	m.methods = map[string]AuthenticateMethod{}
+}
+
+func (m *AuthManager) Finalize() {
+	m.enable = false
+	m.methodName = ""
 }
 
 func (m *AuthManager) AuthenticateUser(userId string, userPassword string) (bool, error) {

@@ -59,13 +59,25 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 
 func (m *AuthFile) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
 	// example: "/app/data/secrets/secrets.json"
+	if c.Methods.File.Filename == "" && c.Method == "FILE" && c.Enable {
+		err := fmt.Errorf("filename is empty")
+		logger.Error(
+			"can't initialize credentials",
+			zap.String("topic", "credentials"),
+			zap.String("method", "Initialize"),
+			zap.String("filename", ""),
+			zap.Error(err),
+		)
+		return err
+	}
+
 	m.filename = c.Methods.File.Filename
 	if err := m.LoadCredentialsFromFile(m.filename); err != nil {
 		logger.Error(
 			"can't initialize credentials",
 			zap.String("topic", "credentials"),
 			zap.String("method", "Initialize"),
-			zap.Any("filename", m.filename),
+			zap.String("filename", m.filename),
 			zap.Error(err),
 		)
 		return err

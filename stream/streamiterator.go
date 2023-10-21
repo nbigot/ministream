@@ -111,6 +111,19 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 		recordId, record, foundRecord, canContinue, err = it.handler.GetNextRecord()
 
 		if !foundRecord {
+			// // TODO: ajouter un mécanisme comme dans aws sqs qui attend x secondes avant de retourner un résultat
+			// // on ne retourne pas immédiatement une réponse vide, on attend la fin du timeout (max 60 secs par exemple)
+			// // on peut imaginer utiliser un header http pour spécifier le délai d'attente maximal
+			// // long pooling
+			// if maxWaitTimeSeconds > 0 && response.Count == 0 {
+			// 	elaspedTime := int(time.Since(startTime).Seconds())
+			// 	if elaspedTime < maxWaitTimeSeconds {
+			// 		// has not timed out already
+			// 		time.Sleep()
+			// 		continue
+			// 	}
+			// }
+
 			// no record found, this is the end of the stream
 			err = nil
 			break

@@ -2,21 +2,23 @@ package rbac
 
 import (
 	"fmt"
-	"os"
 
-	"github.com/goccy/go-json"
 	"go.uber.org/zap"
 )
 
 type RBACManager struct {
-	Logger     *zap.Logger
+	// a logger
+	Logger *zap.Logger
+	// list of all possible actions
 	ActionList []string
-	Rbac       *RBAC
-	enabled    bool
+	// the RBAC configuration
+	Rbac *RBAC
+	// flag to enable or disable testing the RBAC rules
+	enabled bool
 }
 
 var (
-	RbacMgr RBACManager
+	RbacMgr *RBACManager
 )
 
 func (m *RBACManager) Initialize(logger *zap.Logger, enable bool, actionList []string, filename string) error {
@@ -34,106 +36,25 @@ func (m *RBACManager) Initialize(logger *zap.Logger, enable bool, actionList []s
 }
 
 func (m *RBACManager) LoadConfiguration(filename string) error {
-	m.Logger.Info(
-		"Loading RBAC",
-		zap.String("topic", "rbac"),
-		zap.String("method", "LoadConfiguration"),
-		zap.String("filename", filename),
-	)
-
-	file, err := os.Open(filename)
-	if err != nil {
-		m.Logger.Fatal(
-			"Can't open RBAC file",
-			zap.String("topic", "rbac"),
-			zap.String("method", "LoadConfiguration"),
-			zap.String("filename", filename),
-			zap.Error(err),
-		)
+	var err error
+	if m.Rbac, err = NewRBAC(m.Logger, filename); err != nil {
 		return err
 	}
-	defer file.Close()
-
-	srbac := RBACSerializeStruct{}
-	jsonDecoder := json.NewDecoder(file)
-	err = jsonDecoder.Decode(&srbac)
-	if err != nil {
-		m.Logger.Fatal(
-			"Can't decode json RBAC",
-			zap.String("topic", "rbac"),
-			zap.String("method", "LoadConfiguration"),
-			zap.String("filename", filename),
-			zap.Error(err),
-		)
-		return err
-	}
-
-	m.Rbac, err = m.DeserializeRBACConfig(&srbac)
-	return err
+	return m.ValidateActions()
 }
 
-func (m *RBACManager) DeserializeRBACConfig(s *RBACSerializeStruct) (*RBAC, error) {
-	rbacObj := RBAC{
-		Users: make(map[string]*User),
-		Roles: make(map[string]*Role),
-		Rules: make(map[string]*Rule),
-	}
-
-	for _, sRule := range s.Rules {
-		if _, foundRule := rbacObj.Rules[sRule.Id]; foundRule {
-			return nil, fmt.Errorf("RBAC Rule id must be unique: %s", sRule.Id)
-		}
+func (m *RBACManager) ValidateActions() error {
+	for _, sRule := range m.Rbac.Rules {
 		for _, action := range sRule.Actions {
 			if !m.IsValidAction(action) {
-				return nil, fmt.Errorf("RBAC Rule action unknown: %s", action)
+				return fmt.Errorf("RBAC Rule action unknown: %s in rule id %s", action, sRule.Id)
 			}
 		}
-		if abac, err := makeABAC(sRule.JQAbac); err != nil {
-			return nil, err
-		} else {
-			rule := Rule{Id: sRule.Id, Actions: sRule.Actions, Abac: abac}
-			rbacObj.Rules[sRule.Id] = &rule
-		}
 	}
-
-	for _, sRole := range s.Roles {
-		if _, foundRole := rbacObj.Roles[sRole.Id]; foundRole {
-			return nil, fmt.Errorf("RBAC Role id must be unique: %s", sRole.Id)
-		}
-		role := Role{Id: sRole.Id, Description: sRole.Description, Rules: make([]*Rule, 0)}
-		for _, ruleId := range sRole.Rules {
-			if pRule, foundRule := rbacObj.Rules[ruleId]; foundRule {
-				role.Rules = append(role.Rules, pRule)
-			} else {
-				return nil, fmt.Errorf("RBAC Rule id %s not found for role: %s", ruleId, sRole.Id)
-			}
-		}
-		rbacObj.Roles[sRole.Id] = &role
-	}
-
-	for _, sUser := range s.Users {
-		if _, foundUser := rbacObj.Users[sUser.Id]; foundUser {
-			return nil, fmt.Errorf("RBAC user id must be unique: %s", sUser.Id)
-		}
-		user := User{Id: sUser.Id, Description: sUser.Description, Roles: make([]*Role, 0)}
-		for _, roleId := range sUser.Roles {
-			if pRole, foundRole := rbacObj.Roles[roleId]; foundRole {
-				user.Roles = append(user.Roles, pRole)
-			} else {
-				return nil, fmt.Errorf("RBAC Role id %s not found for user: %s", roleId, sUser.Id)
-			}
-		}
-		rbacObj.Users[sUser.Id] = &user
-	}
-
-	return &rbacObj, nil
+	return nil
 }
 
 func (m *RBACManager) IsValidAction(action string) bool {
-	if !m.enabled {
-		return true
-	}
-
 	for _, actionName := range m.ActionList {
 		if action == actionName {
 			return true
@@ -144,4 +65,41 @@ func (m *RBACManager) IsValidAction(action string) bool {
 
 func (m *RBACManager) IsEnabled() bool {
 	return m.enabled
+}
+
+func (m *RBACManager) Finalize() {
+	m.enabled = false
+	m.ActionList = nil
+	m.Logger = nil
+	m.Rbac = nil
+}
+
+func NewRBACManager(logger *zap.Logger, enableRBAC bool, configurationFilenameRBAC string) *RBACManager {
+	logger.Info(
+		"Loading server RBAC auth configuration",
+		zap.String("topic", "RBAC"),
+		zap.String("method", "NewRBACManager"),
+	)
+
+	mgr := &RBACManager{Logger: logger, Rbac: nil, enabled: false}
+
+	if enableRBAC {
+		err2 := mgr.Initialize(logger, enableRBAC, ActionList, configurationFilenameRBAC)
+		if err2 != nil {
+			logger.Fatal("Error while loading RBAC",
+				zap.String("topic", "RBAC"),
+				zap.String("method", "NewRBACManager"),
+				zap.String("filename", configurationFilenameRBAC),
+				zap.Error(err2),
+			)
+		}
+	} else {
+		logger.Info(
+			"RBAC is disabled in configuration",
+			zap.String("topic", "RBAC"),
+			zap.String("method", "NewRBACManager"),
+		)
+	}
+
+	return mgr
 }

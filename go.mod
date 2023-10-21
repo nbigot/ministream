@@ -20,6 +20,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
+
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect

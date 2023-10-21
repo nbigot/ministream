@@ -130,8 +130,6 @@ type Config struct {
 	WebServer WebServerConfig `yaml:"webserver"`
 }
 
-var ConfigFile = ""
-
 func LoadConfig(filename string) (*Config, error) {
 	var configuration Config
 

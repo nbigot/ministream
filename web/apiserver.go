@@ -52,7 +52,7 @@ func (w *WebAPIServer) ApiServerRestart(c *fiber.Ctx) error {
 // @success 200 {object} web.JSONResultSuccess{} "successful operation"
 // @Router /api/v1/admin/jwt/revoke [post]
 func (w *WebAPIServer) ActionJWTRevokeAll(c *fiber.Ctx) error {
-	JWTRevokeAll()
+	JWTMgr.RevokeAll()
 	return c.JSON(
 		JSONResultSuccess{
 			Code:    fiber.StatusOK,

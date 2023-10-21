@@ -67,7 +67,7 @@ func (s *Server) Initialize(ctx context.Context, options ...ServerOption) error 
 	signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	s.app = fiber.New(s.fiberConfig)
 
-	s.webAPIServer = web.NewWebAPIServer(s.appConfig, s.fiberConfig, s.service, func() { s.ShutdownServer() }, func() { s.RestartServer() })
+	s.webAPIServer = web.NewWebAPIServer(s.appConfig, s.fiberConfig, s.service, func() { s.RequestShutdownServer() }, func() { s.RequestRestartServer() })
 
 	// Apply all the functional options to configure the client.
 	// options examples: fiber logger, cors config, add routes, ...
@@ -75,7 +75,7 @@ func (s *Server) Initialize(ctx context.Context, options ...ServerOption) error 
 		opt(s)
 	}
 
-	s.status = ServerStatusInitialized
+	s.SetStatus(ServerStatusInitialized)
 	return nil
 }
 
@@ -83,11 +83,19 @@ func (s *Server) Start() error {
 	if s.status != ServerStatusInitialized {
 		return fmt.Errorf("cannot start server: invalid status code %d", s.status)
 	}
-	s.status = ServerStatusRunning
+	s.SetStatus(ServerStatusRunning)
 	s.Listen()
 	err := s.HandleSignals()
-	s.status = ServerStatusInitialized
+	s.SetStatus(ServerStatusInitialized)
 	return err
+}
+
+func (s *Server) Finalize() {
+	if s.GetStatus() == ServerStatusRunning {
+		if shutdownErr := s.Shutdown(); shutdownErr != nil {
+			s.logger.Error("Server shutdown with error", zap.String("topic", "server"), zap.Error(shutdownErr))
+		}
+	}
 }
 
 func (s *Server) GetWebAPIServer() *web.WebAPIServer {
@@ -144,6 +152,8 @@ func (s *Server) Listen() {
 
 func (s *Server) HandleSignals() error {
 	// This will run forever until channel receives error or an os signal
+	defer s.shutdownListener()
+
 	for {
 		select {
 		case <-s.ctx.Done():
@@ -156,11 +166,6 @@ func (s *Server) HandleSignals() error {
 				return fmt.Errorf("received signal hang up: %w", ErrRequestRestart)
 			case syscall.SIGTERM:
 				// stop server due to a signal SIGTERM
-				s.logger.Info("Shutdown Server ...", zap.String("topic", "server"), zap.String("method", "HandleSignals"))
-				if err := s.app.Shutdown(); err != nil {
-					s.logger.Error("Server Shutdown", zap.String("topic", "server"), zap.String("method", "HandleSignals"), zap.Error(err))
-				}
-				s.logger.Info("Web server stopped", zap.String("topic", "server"), zap.String("method", "HandleSignals"))
 				return nil
 			}
 		case err := <-s.errsChan:
@@ -171,22 +176,34 @@ func (s *Server) HandleSignals() error {
 	}
 }
 
+func (s *Server) shutdownListener() {
+	s.logger.Info("Shutdown Server ...", zap.String("topic", "server"), zap.String("method", "shutdownListener"))
+	if err := s.app.Shutdown(); err != nil {
+		s.logger.Error("Server Shutdown", zap.String("topic", "server"), zap.String("method", "shutdownListener"), zap.Error(err))
+	}
+	s.logger.Info("Web server stopped", zap.String("topic", "server"), zap.String("method", "shutdownListener"))
+}
+
 func (s *Server) Shutdown() error {
 	// request to stop the server: the server will not yet be stopped at the end of this function
 	if s.status != ServerStatusRunning {
 		return fmt.Errorf("cannot stop server: invalid status code %d", s.status)
 	}
-	s.status = ServerStatusStopping
-	s.ShutdownServer()
+	s.SetStatus(ServerStatusStopping)
+	s.RequestShutdownServer()
 	return nil
 }
 
-func (s *Server) ShutdownServer() {
+func (s *Server) RequestShutdownServer() {
 	// send signal SIGTERM
 	s.signals <- syscall.SIGTERM
 }
 
-func (s *Server) RestartServer() {
+func (s *Server) RequestRestartServer() {
 	// send signal SIGHUP
 	s.signals <- syscall.SIGHUP
+}
+
+func (s *Server) SetStatus(status ServerStatus) {
+	s.status = status
 }

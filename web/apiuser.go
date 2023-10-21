@@ -65,7 +65,7 @@ func (w *WebAPIServer) LoginUser(c *fiber.Ctx) error {
 	accountId := account.AccountMgr.GetAccount().Id.String()
 	accessKeyId := c.Get("ACCESS-KEY-ID", "")
 	secretAccessKey := c.Get("SECRET-ACCESS-KEY", "")
-	success, token, claims, _, err := GenerateJWT(false, accessKeyId, secretAccessKey)
+	success, token, claims, _, err := JWTMgr.GenerateJWT(false, accessKeyId, secretAccessKey)
 
 	if err != nil {
 		log.Logger.Error(

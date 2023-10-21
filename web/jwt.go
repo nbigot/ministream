@@ -17,14 +17,18 @@ import (
 	"github.com/google/uuid"
 )
 
-var jwtConfig config.JWTConfig
+type JWTManager struct {
+	config config.JWTConfig
+}
+
+var JWTMgr JWTManager
 
 func JWTProtected() func(*fiber.Ctx) error {
 	return jwtware.New(jwtware.Config{
 		Filter: func(c *fiber.Ctx) bool {
-			return !jwtConfig.Enable
+			return !JWTMgr.config.Enable
 		},
-		SigningKey:     []byte(jwtConfig.SecretKey),
+		SigningKey:     []byte(JWTMgr.config.SecretKey),
 		SuccessHandler: JWTPostValidate,
 		ErrorHandler:   jwtError,
 		ContextKey:     constants.JWTContextKey,
@@ -74,10 +78,10 @@ func JWTPostValidate(c *fiber.Ctx) error {
 
 	token := value.(*jwt.Token)
 	claims := token.Claims.(jwt.MapClaims)
-	valid := claims["iss"] == jwtConfig.ISS &&
-		claims["sub"] == jwtConfig.Sub &&
-		claims["aud"] == jwtConfig.Aud &&
-		claims[constants.JWTClaimsAccountKey] == jwtConfig.AccountId
+	valid := claims["iss"] == JWTMgr.config.ISS &&
+		claims["sub"] == JWTMgr.config.Sub &&
+		claims["aud"] == JWTMgr.config.Aud &&
+		claims[constants.JWTClaimsAccountKey] == JWTMgr.config.AccountId
 
 	if !valid {
 		httpError := apierror.APIError{
@@ -88,7 +92,7 @@ func JWTPostValidate(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	if int64(claims["iat"].(float64)) < jwtConfig.RevokeEmittedBeforeDate.Unix() {
+	if int64(claims["iat"].(float64)) < JWTMgr.config.RevokeEmittedBeforeDate.Unix() {
 		httpError := apierror.APIError{
 			Message:  "jwt was revoked",
 			Code:     constants.ErrorJWTInvalidOrExpired,
@@ -126,19 +130,19 @@ func JWTPostValidate(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-func GenerateJWT(isSuperUser bool, accessKeyId string, secretAccessKey string) (bool, string, *jwt.MapClaims, *rbac.User, error) {
+func (m *JWTManager) GenerateJWT(isSuperUser bool, accessKeyId string, secretAccessKey string) (bool, string, *jwt.MapClaims, *rbac.User, error) {
 	// Generate a Json Web Token
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	// https://datatracker.ietf.org/doc/html/rfc7519
 	claims := token.Claims.(jwt.MapClaims)
-	claims["iss"] = jwtConfig.ISS                                                                      // issuer
-	claims["sub"] = jwtConfig.Sub                                                                      // subject
-	claims["aud"] = jwtConfig.Aud                                                                      // audience
-	claims["exp"] = time.Now().Add(time.Minute * time.Duration(jwtConfig.TokenExpireInMinutes)).Unix() // expiration time
-	claims["iat"] = time.Now().Unix()                                                                  // issued at
-	claims["jti"] = uuid.NewString()                                                                   // JWT unique ID
-	claims[constants.JWTClaimsAccountKey] = jwtConfig.AccountId                                        // account id (any customer value)
+	claims["iss"] = m.config.ISS                                                                      // issuer
+	claims["sub"] = m.config.Sub                                                                      // subject
+	claims["aud"] = m.config.Aud                                                                      // audience
+	claims["exp"] = time.Now().Add(time.Minute * time.Duration(m.config.TokenExpireInMinutes)).Unix() // expiration time
+	claims["iat"] = time.Now().Unix()                                                                 // issued at
+	claims["jti"] = uuid.NewString()                                                                  // JWT unique ID
+	claims[constants.JWTClaimsAccountKey] = m.config.AccountId                                        // account id (any customer value)
 
 	success := false
 	var err error
@@ -167,7 +171,7 @@ func GenerateJWT(isSuperUser bool, accessKeyId string, secretAccessKey string) (
 		return success, "", &claims, user, err
 	}
 
-	t, err := token.SignedString([]byte(jwtConfig.SecretKey))
+	t, err := token.SignedString([]byte(m.config.SecretKey))
 	if err != nil {
 		return success, "", &claims, user, err
 	}
@@ -175,15 +179,15 @@ func GenerateJWT(isSuperUser bool, accessKeyId string, secretAccessKey string) (
 	return true, t, &claims, user, err
 }
 
-func JWTRevokeAll() {
-	jwtConfig.RevokeEmittedBeforeDate = time.Now()
+func (m *JWTManager) RevokeAll() {
+	m.config.RevokeEmittedBeforeDate = time.Now()
 }
 
-func JWTInit(conf config.JWTConfig) {
-	jwtConfig := conf
+func (m *JWTManager) Initialize(conf config.JWTConfig) {
+	m.config = conf
 
 	// generate a secret key if the default one from the configuration file is empty
-	if jwtConfig.SecretKey != "" {
+	if m.config.SecretKey != "" {
 		return
 	}
 
@@ -196,5 +200,13 @@ func JWTInit(conf config.JWTConfig) {
 	if _, err := rand.Read(key); err != nil {
 		panic(err)
 	}
-	jwtConfig.SecretKey = string(key[:])
+	m.config.SecretKey = string(key[:])
+}
+
+func (m *JWTManager) ResetConfig() {
+	m.config = config.JWTConfig{}
+}
+
+func (m *JWTManager) Finalize() {
+	m.ResetConfig()
 }

@@ -141,7 +141,7 @@ func (w *WebAPIServer) LoginAccount(c *fiber.Ctx) error {
 	var err error = nil
 	var claims *jwt.MapClaims = nil
 	if apiKey == account.SecretAPIKey {
-		success, token, claims, _, err = GenerateJWT(true, "", "")
+		success, token, claims, _, err = JWTMgr.GenerateJWT(true, "", "")
 	}
 
 	if !success || err != nil {
