@@ -18,7 +18,7 @@ const ActionRebuildIndex = "RebuildIndex"
 const ActionListUsers = "ListUsers"
 const ActionGetAccount = "GetAccount"
 const ActionShutdownServer = "ShutdownServer"
-const ActionReloadServerAuth = "ReloadServerAuth"
+const ActionRestartServer = "RestartServer"
 const ActionJWTRevokeAll = "JWTRevokeAll"
 
 var ActionList = []string{
@@ -26,5 +26,5 @@ var ActionList = []string{
 	ActionListStreams, ActionListStreamsProperties, ActionGetStreamDescription, ActionGetStreamProperties,
 	ActionSetStreamProperties, ActionUpdateStreamProperties, ActionCreateStream, ActionDeleteStream,
 	ActionCloseRecordsIterator, ActionRebuildIndex, ActionListUsers,
-	ActionGetAccount, ActionShutdownServer, ActionReloadServerAuth, ActionJWTRevokeAll,
+	ActionGetAccount, ActionShutdownServer, ActionRestartServer, ActionJWTRevokeAll,
 }

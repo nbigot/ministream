@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/nbigot/ministream/buffering"
-	"github.com/nbigot/ministream/config"
 	. "github.com/nbigot/ministream/types"
 
 	"github.com/dustin/go-humanize"
@@ -86,11 +85,6 @@ func (s *Stream) Close() error {
 func (s *Stream) AddIterator(it *StreamIterator) error {
 	if s.state != STREAM_STATE_RUNNING {
 		return errors.New("stream state is not running")
-	}
-
-	// check limit the number of iterators for the stream
-	if config.Configuration.Streams.MaxIteratorsPerStream > 0 && len(s.iterators) > config.Configuration.Streams.MaxIteratorsPerStream {
-		return errors.New("too many iterators opened for this stream")
 	}
 
 	itUUID := it.GetUUID()
@@ -387,6 +381,10 @@ func (s *Stream) GetInfo() *StreamInfo {
 
 func (s *Stream) GetUUID() StreamUUID {
 	return s.info.UUID
+}
+
+func (s *Stream) GetIteratorsCount() int {
+	return len(s.iterators)
 }
 
 func NewStream(info *StreamInfo, ingestBuffer *buffering.StreamIngestBuffer, logger *zap.Logger, logVerbosity int) *Stream {

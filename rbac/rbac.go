@@ -2,8 +2,11 @@ package rbac
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/goccy/go-json"
 	"github.com/itchyny/gojq"
+	"go.uber.org/zap"
 )
 
 type User struct {
@@ -113,4 +116,94 @@ func (u *User) GetRoles() []string {
 		roles = append(roles, role.Id)
 	}
 	return roles
+}
+
+func DeserializeRBACConfig(s *RBACSerializeStruct) (*RBAC, error) {
+	rbacObj := RBAC{
+		Users: make(map[string]*User),
+		Roles: make(map[string]*Role),
+		Rules: make(map[string]*Rule),
+	}
+
+	for _, sRule := range s.Rules {
+		if _, foundRule := rbacObj.Rules[sRule.Id]; foundRule {
+			return nil, fmt.Errorf("RBAC Rule id must be unique: %s", sRule.Id)
+		}
+		if abac, err := makeABAC(sRule.JQAbac); err != nil {
+			return nil, err
+		} else {
+			rule := Rule{Id: sRule.Id, Actions: sRule.Actions, Abac: abac}
+			rbacObj.Rules[sRule.Id] = &rule
+		}
+	}
+
+	for _, sRole := range s.Roles {
+		if _, foundRole := rbacObj.Roles[sRole.Id]; foundRole {
+			return nil, fmt.Errorf("RBAC Role id must be unique: %s", sRole.Id)
+		}
+		role := Role{Id: sRole.Id, Description: sRole.Description, Rules: make([]*Rule, 0)}
+		for _, ruleId := range sRole.Rules {
+			if pRule, foundRule := rbacObj.Rules[ruleId]; foundRule {
+				role.Rules = append(role.Rules, pRule)
+			} else {
+				return nil, fmt.Errorf("RBAC Rule id %s not found for role: %s", ruleId, sRole.Id)
+			}
+		}
+		rbacObj.Roles[sRole.Id] = &role
+	}
+
+	for _, sUser := range s.Users {
+		if _, foundUser := rbacObj.Users[sUser.Id]; foundUser {
+			return nil, fmt.Errorf("RBAC user id must be unique: %s", sUser.Id)
+		}
+		user := User{Id: sUser.Id, Description: sUser.Description, Roles: make([]*Role, 0)}
+		for _, roleId := range sUser.Roles {
+			if pRole, foundRole := rbacObj.Roles[roleId]; foundRole {
+				user.Roles = append(user.Roles, pRole)
+			} else {
+				return nil, fmt.Errorf("RBAC Role id %s not found for user: %s", roleId, sUser.Id)
+			}
+		}
+		rbacObj.Users[sUser.Id] = &user
+	}
+
+	return &rbacObj, nil
+}
+
+func NewRBAC(logger *zap.Logger, filename string) (*RBAC, error) {
+	logger.Info(
+		"Loading RBAC",
+		zap.String("topic", "rbac"),
+		zap.String("method", "LoadConfiguration"),
+		zap.String("filename", filename),
+	)
+
+	file, err := os.Open(filename)
+	if err != nil {
+		logger.Fatal(
+			"Can't open RBAC file",
+			zap.String("topic", "rbac"),
+			zap.String("method", "LoadConfiguration"),
+			zap.String("filename", filename),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+	defer file.Close()
+
+	srbac := RBACSerializeStruct{}
+	jsonDecoder := json.NewDecoder(file)
+	err = jsonDecoder.Decode(&srbac)
+	if err != nil {
+		logger.Fatal(
+			"Can't decode json RBAC",
+			zap.String("topic", "rbac"),
+			zap.String("method", "LoadConfiguration"),
+			zap.String("filename", filename),
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	return DeserializeRBACConfig(&srbac)
 }

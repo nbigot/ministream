@@ -4,7 +4,7 @@
 
 Run:
 
-		$ ./build-doc-swagger.bat
+		$ ./build-doc-swagger.sh
 or
 
 		$ swag init

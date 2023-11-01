@@ -23,7 +23,7 @@ type Pbkdf2Payload struct {
 // @Tags Utils
 // @Success 200 {string} string "ok"
 // @Router /api/v1/utils/ping [get]
-func Ping(c *fiber.Ctx) error {
+func (w *WebAPIServer) Ping(c *fiber.Ctx) error {
 	return c.SendString("ok")
 }
 
@@ -38,7 +38,7 @@ func Ping(c *fiber.Ctx) error {
 // @Success 200 {object} web.JSONResultPbkdf2 "successful operation"
 // @Failure 400 {object} apierror.APIError
 // @Router /api/v1/utils/pbkdf2 [post]
-func ApiServerUtilsPbkdf2(c *fiber.Ctx) error {
+func (w *WebAPIServer) ApiServerUtilsPbkdf2(c *fiber.Ctx) error {
 	var payload Pbkdf2Payload
 
 	if apiErr := GetPayload(c, &payload); apiErr != nil {

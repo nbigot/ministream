@@ -53,9 +53,9 @@ func (svc *Service) startStream(info *StreamInfo) (*Stream, error) {
 	}
 
 	ingestBuffer := buffering.NewStreamIngestBuffer(
-		time.Duration(config.Configuration.Streams.BulkFlushFrequency)*time.Second,
-		config.Configuration.Streams.BulkMaxSize,
-		config.Configuration.Streams.ChannelBufferSize,
+		time.Duration(svc.conf.Streams.BulkFlushFrequency)*time.Second,
+		svc.conf.Streams.BulkMaxSize,
+		svc.conf.Streams.ChannelBufferSize,
 		writer,
 	)
 	s := NewStream(info, ingestBuffer, log.Logger, svc.conf.Streams.LogVerbosity)
@@ -260,49 +260,27 @@ func (svc *Service) CreateRecordsIterator(streamPtr *Stream, req *StreamIterator
 	var iter *StreamIterator
 	var handler IStreamIteratorHandler
 	streamUUID := streamPtr.GetUUID()
+
+	// check limit the number of iterators for the stream
+	if svc.conf.Streams.MaxIteratorsPerStream > 0 && streamPtr.GetIteratorsCount() > svc.conf.Streams.MaxIteratorsPerStream {
+		return errorCreateRecordsIterator(streamUUID, constants.ErrorCantCreateRecordsIterator, errors.New("too many iterators opened for this stream"))
+	}
+
 	iteratorUUID := uuid.New()
 	if handler, err = svc.sp.NewStreamIteratorHandler(streamUUID, iteratorUUID); err != nil {
-		return uuid.Nil, &APIError{
-			Message:    "cannot create stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorCantCreateRecordsIterator,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
+		return errorCreateRecordsIterator(streamUUID, constants.ErrorCantCreateRecordsIterator, err)
 	}
 
 	if iter, err = NewStreamIterator(streamUUID, iteratorUUID, req, handler, svc.GetLogger()); err != nil {
-		return uuid.Nil, &APIError{
-			Message:    "cannot create stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorInvalidCreateRecordsIteratorRequest,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
+		return errorCreateRecordsIterator(streamUUID, constants.ErrorInvalidCreateRecordsIteratorRequest, err)
 	}
 
 	if err = streamPtr.AddIterator(iter); err != nil {
-		return uuid.Nil, &APIError{
-			Message:    "cannot create stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorCantCreateRecordsIterator,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
+		return errorCreateRecordsIterator(streamUUID, constants.ErrorCantCreateRecordsIterator, err)
 	}
 
 	if err = iter.Open(); err != nil {
-		return uuid.Nil, &APIError{
-			Message:    "cannot open stream iterator",
-			Details:    err.Error(),
-			Code:       constants.ErrorCantCreateRecordsIterator,
-			HttpCode:   fiber.StatusBadRequest,
-			StreamUUID: streamUUID,
-			Err:        err,
-		}
+		return errorCreateRecordsIterator(streamUUID, constants.ErrorCantCreateRecordsIterator, err)
 	}
 
 	return iteratorUUID, nil
@@ -314,6 +292,10 @@ func (svc *Service) GetLogger() *zap.Logger {
 
 func (svc *Service) BuildIndex(streamUUID StreamUUID) (interface{}, error) {
 	return svc.sp.BuildIndex(streamUUID)
+}
+
+func (svc *Service) Finalize() {
+	svc.Stop()
 }
 
 func (svc *Service) Stop() {
@@ -343,14 +325,14 @@ func (svc *Service) setStreamMap(streamUUID StreamUUID, s *Stream) {
 	svc.mapMutex.Unlock()
 }
 
-func NewService() *Service {
+func NewService(conf *config.Config) *Service {
 	var err error
 
-	svc, err := NewStreamService(log.Logger, &config.Configuration)
+	svc, err := NewStreamService(log.Logger, conf)
 	if err != nil {
 		log.Logger.Fatal("Error while instantiate stream service",
 			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
+			zap.String("method", "NewService"),
 			zap.Error(err),
 		)
 	}
@@ -359,7 +341,7 @@ func NewService() *Service {
 	if err != nil {
 		log.Logger.Fatal("Error while initialize stream service",
 			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
+			zap.String("method", "NewService"),
 			zap.Error(err),
 		)
 	}
@@ -368,7 +350,7 @@ func NewService() *Service {
 	if err != nil {
 		log.Logger.Fatal("Error while loading streams",
 			zap.String("topic", "server"),
-			zap.String("method", "GoServer"),
+			zap.String("method", "NewService"),
 			zap.Error(err),
 		)
 	}
@@ -376,16 +358,27 @@ func NewService() *Service {
 	log.Logger.Info(
 		"Stream server started",
 		zap.String("topic", "server"),
-		zap.String("method", "GoServer"),
+		zap.String("method", "NewService"),
 	)
 
 	return svc
 }
 
 func NewStreamService(logger *zap.Logger, conf *config.Config) (*Service, error) {
-	sp, err := registry.NewStorageProvider(logger, conf)
+	sp, err := registry.NewStorageProvider(conf)
 	if err != nil {
 		return nil, err
 	}
 	return &Service{logger: logger, conf: conf, sp: sp, Hashmap: make(StreamMap)}, nil
+}
+
+func errorCreateRecordsIterator(streamUUID uuid.UUID, errorCode int, err error) (StreamIteratorUUID, *APIError) {
+	return uuid.Nil, &APIError{
+		Message:    "cannot create stream iterator",
+		Details:    err.Error(),
+		Code:       errorCode,
+		HttpCode:   fiber.StatusBadRequest,
+		StreamUUID: streamUUID,
+		Err:        err,
+	}
 }

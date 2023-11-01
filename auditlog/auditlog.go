@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/nbigot/ministream/config"
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
 	. "github.com/nbigot/ministream/web/apierror"
@@ -15,10 +14,6 @@ import (
 )
 
 func RBACHandlerLogAccessGranted(c *fiber.Ctx) error {
-	if !config.Configuration.AuditLog.Enable || !config.Configuration.AuditLog.EnableLogAccessGranted {
-		return c.Next()
-	}
-
 	m := c.Locals(constants.RBACContextKey)
 	if m == nil {
 		m = errors.New("RBAC map attributes not found")
@@ -44,7 +39,7 @@ func RBACHandlerLogAccessGranted(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error) error {
+func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error, auditLogEnabled bool) error {
 	action := ""
 	internalError := false
 	m := c.Locals(constants.RBACContextKey)
@@ -55,7 +50,7 @@ func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error) error {
 		action = *reason["action"]
 	}
 
-	if config.Configuration.AuditLog.Enable {
+	if auditLogEnabled {
 		if internalError {
 			log.Logger.Error(
 				"RBAC internal error",

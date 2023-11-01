@@ -14,9 +14,6 @@ type AccountManager struct {
 
 var AccountMgr AccountManager
 
-func (m *AccountManager) init() {
-}
-
 func (m *AccountManager) Initialize(logger *zap.Logger, account *config.Account) error {
 	m.Account = account
 	if account.Id.ID() == 0 {
@@ -45,6 +42,6 @@ func (m *AccountManager) GetAccount() *config.Account {
 	return m.Account
 }
 
-func init() {
-	AccountMgr.init()
+func (m *AccountManager) Finalize() {
+	m.Account = nil
 }
