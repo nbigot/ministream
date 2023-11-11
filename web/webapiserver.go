@@ -110,6 +110,10 @@ func (w *WebAPIServer) RestartServer() {
 	w.funcRestartServer()
 }
 
+func (w *WebAPIServer) GetFiberApp() *fiber.App {
+	return w.app
+}
+
 func NewWebAPIServer(appConfig *config.Config, fiberConfig fiber.Config, service *service.Service, funcShutdownServer func(), funcRestartServer func()) *WebAPIServer {
 	return &WebAPIServer{
 		service:            service,

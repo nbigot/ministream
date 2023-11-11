@@ -31,7 +31,6 @@ type Server struct {
 	errsChan     chan error
 	ctx          context.Context
 	status       ServerStatus
-	app          *fiber.App
 	fiberConfig  fiber.Config
 	appConfig    *config.Config
 	logger       *zap.Logger
@@ -50,7 +49,6 @@ func NewServer(logger *zap.Logger, fiberConfig fiber.Config, appConfig *config.C
 		stopChan:     make(chan bool, 1),
 		errsChan:     make(chan error),
 		status:       ServerStatusNone,
-		app:          nil,
 		fiberConfig:  fiberConfig,
 		appConfig:    appConfig,
 		logger:       logger,
@@ -65,8 +63,6 @@ func (s *Server) Initialize(ctx context.Context, options ...ServerOption) error 
 	}
 	s.ctx = ctx
 	signal.Notify(s.signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	s.app = fiber.New(s.fiberConfig)
-
 	s.webAPIServer = web.NewWebAPIServer(s.appConfig, s.fiberConfig, s.service, func() { s.RequestShutdownServer() }, func() { s.RequestRestartServer() })
 
 	// Apply all the functional options to configure the client.
@@ -103,7 +99,7 @@ func (s *Server) GetWebAPIServer() *web.WebAPIServer {
 }
 
 func (s *Server) GetApp() *fiber.App {
-	return s.app
+	return s.webAPIServer.GetFiberApp()
 }
 
 func (s *Server) GetStatus() ServerStatus {
@@ -125,7 +121,7 @@ func (s *Server) Listen() {
 				zap.String("method", "Listen"),
 				zap.String("address", webConfig.HTTP.Address),
 			)
-			if err := s.app.Listen(webConfig.HTTP.Address); err != nil {
+			if err := s.GetApp().Listen(webConfig.HTTP.Address); err != nil {
 				s.errsChan <- err
 			}
 		}()
@@ -139,7 +135,7 @@ func (s *Server) Listen() {
 				zap.String("method", "Listen"),
 				zap.String("address", webConfig.HTTPS.Address),
 			)
-			if err := s.app.ListenTLS(
+			if err := s.GetApp().ListenTLS(
 				webConfig.HTTPS.Address,
 				webConfig.HTTPS.CertFile,
 				webConfig.HTTPS.KeyFile,
@@ -178,7 +174,7 @@ func (s *Server) HandleSignals() error {
 
 func (s *Server) shutdownListener() {
 	s.logger.Info("Shutdown Server ...", zap.String("topic", "server"), zap.String("method", "shutdownListener"))
-	if err := s.app.Shutdown(); err != nil {
+	if err := s.GetApp().Shutdown(); err != nil {
 		s.logger.Error("Server Shutdown", zap.String("topic", "server"), zap.String("method", "shutdownListener"), zap.Error(err))
 	}
 	s.logger.Info("Web server stopped", zap.String("topic", "server"), zap.String("method", "shutdownListener"))
