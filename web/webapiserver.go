@@ -2,8 +2,11 @@ package web
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 
 	"github.com/nbigot/ministream/auditlog"
 	"github.com/nbigot/ministream/config"
@@ -81,12 +84,22 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 	apiUtils.Post("/pbkdf2", RateLimiterUtils(rateLimiterEnable), w.ApiServerUtilsPbkdf2)
 	apiUtils.Get("/ping", w.Ping)
 
+	app.Use(healthcheck.New())
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Welcome to ministream!")
 	})
 
 	if w.appConfig.WebServer.Monitor.Enable {
 		app.Get("/monitor", monitor.New())
+	}
+
+	if w.appConfig.WebServer.Metrics.Enable {
+		app.Get("/metrics", func(c *fiber.Ctx) error {
+			prometheusHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+			prometheusHandler(c.Context())
+			return nil
+		})
 	}
 
 	if w.appConfig.WebServer.Swagger.Enable {
