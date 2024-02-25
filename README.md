@@ -121,6 +121,12 @@ Welcome to ministream!
 
 $ curl http://localhost:8080/api/v1/utils/ping
 ok
+
+$ curl http://localhost:8080/livez
+ok
+
+$ curl http://localhost:8080/readyz
+ok
 ```
 
 

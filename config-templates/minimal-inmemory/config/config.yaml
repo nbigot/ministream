@@ -73,7 +73,7 @@ webserver:
         enable: false
     monitor:
         enable: false
-    opentelemetry:
+    metrics:
         enable: false
     rateLimiter:
         enable: false

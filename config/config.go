@@ -88,6 +88,9 @@ type WebServerConfig struct {
 	Monitor struct {
 		Enable bool `yaml:"enable"`
 	}
+	Metrics struct {
+		Enable bool `yaml:"enable"`
+	}
 	Swagger struct {
 		Enable bool `yaml:"enable"`
 	}
