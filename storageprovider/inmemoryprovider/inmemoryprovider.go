@@ -101,8 +101,8 @@ func (s *InMemoryStorage) LoadStreams() (types.StreamInfoList, error) {
 	return l, nil
 }
 
-func (s *InMemoryStorage) SaveStreamCatalog(streamUUIDs types.StreamUUIDList) error {
-	return s.catalog.SaveStreamCatalog(streamUUIDs)
+func (s *InMemoryStorage) SaveStreamCatalog() error {
+	return s.catalog.SaveStreamCatalog()
 }
 
 func (s *InMemoryStorage) OnCreateStream(info *types.StreamInfo) error {
@@ -115,13 +115,13 @@ func (s *InMemoryStorage) OnCreateStream(info *types.StreamInfo) error {
 		s.inMemoryStreams[info.UUID] = inMemoryStream
 	}
 
-	return nil
+	return s.catalog.OnCreateStream(info)
 }
 
 func (s *InMemoryStorage) LoadStreamsFromUUIDs(streamUUIDs types.StreamUUIDList) (types.StreamInfoList, error) {
 	infos := make(types.StreamInfoList, len(streamUUIDs))
 	for idx, streamUUID := range streamUUIDs {
-		if info, err := s.LoadStreamFromUUID(streamUUID); err != nil {
+		if info, err := s.GetStreamInfo(streamUUID); err != nil {
 			return nil, err
 		} else {
 			infos[idx] = info
@@ -130,20 +130,8 @@ func (s *InMemoryStorage) LoadStreamsFromUUIDs(streamUUIDs types.StreamUUIDList)
 	return infos, nil
 }
 
-func (s *InMemoryStorage) LoadStreamFromUUID(streamUUID types.StreamUUID) (*types.StreamInfo, error) {
-	s.logger.Info(
-		"Loading stream",
-		zap.String("topic", "stream"),
-		zap.String("method", "LoadStreamFromUUID"),
-		zap.String("stream.uuid", streamUUID.String()),
-	)
-
-	s.logger.Error("Can't load stream (persistenct storage not implemented",
-		zap.String("topic", "stream"),
-		zap.String("method", "LoadStreamFromUUID"),
-	)
-
-	return nil, fmt.Errorf("cannot load stream (not implemented) %v", streamUUID)
+func (s *InMemoryStorage) GetStreamInfo(streamUUID types.StreamUUID) (*types.StreamInfo, error) {
+	return s.catalog.GetStreamInfo(streamUUID)
 }
 
 func (s *InMemoryStorage) ClearStreams() error {
@@ -168,7 +156,7 @@ func (s *InMemoryStorage) DeleteStream(streamUUID types.StreamUUID) error {
 	defer s.mu.Unlock()
 
 	delete(s.inMemoryStreams, streamUUID)
-	return nil
+	return s.catalog.OnDeleteStream(streamUUID)
 }
 
 func (s *InMemoryStorage) BuildIndex(streamUUID types.StreamUUID) (interface{}, error) {

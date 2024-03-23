@@ -39,6 +39,7 @@ type JSONResultListStreamsPropertiesResultRow struct {
 	CreationDate time.Time              `json:"creationDate"`
 	LastUpdate   time.Time              `json:"lastUpdate"`
 	Properties   types.StreamProperties `json:"properties"`
+	FirstMsgId   types.MessageId        `json:"firstMsgId"`
 	LastMsgId    types.MessageId        `json:"lastMsgId"`
 }
 

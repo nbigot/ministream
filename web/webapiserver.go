@@ -1,6 +1,8 @@
 package web
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/healthcheck"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
@@ -20,6 +22,7 @@ type WebAPIServer struct {
 	funcRestartServer  func()
 	app                *fiber.App
 	appConfig          *config.Config
+	reqDedupManager    *RequestDeduplicatorManager
 }
 
 func (w *WebAPIServer) AddRoutes(app *fiber.App) {
@@ -116,10 +119,13 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 }
 
 func (w *WebAPIServer) ShutdownServer() {
+	w.reqDedupManager.Stop()
 	w.funcShutdownServer()
 }
 
 func (w *WebAPIServer) RestartServer() {
+	w.reqDedupManager.Stop()
+	w.reqDedupManager.Init()
 	w.funcRestartServer()
 }
 
@@ -134,5 +140,6 @@ func NewWebAPIServer(appConfig *config.Config, fiberConfig fiber.Config, service
 		funcRestartServer:  funcRestartServer,
 		app:                fiber.New(fiberConfig),
 		appConfig:          appConfig,
+		reqDedupManager:    NewRequestDeduplicatorManager(5 * time.Minute),
 	}
 }

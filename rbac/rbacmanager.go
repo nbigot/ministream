@@ -77,7 +77,7 @@ func (m *RBACManager) Finalize() {
 func NewRBACManager(logger *zap.Logger, enableRBAC bool, configurationFilenameRBAC string) *RBACManager {
 	logger.Info(
 		"Loading server RBAC auth configuration",
-		zap.String("topic", "RBAC"),
+		zap.String("topic", "rbac"),
 		zap.String("method", "NewRBACManager"),
 	)
 
@@ -87,7 +87,7 @@ func NewRBACManager(logger *zap.Logger, enableRBAC bool, configurationFilenameRB
 		err2 := mgr.Initialize(logger, enableRBAC, ActionList, configurationFilenameRBAC)
 		if err2 != nil {
 			logger.Fatal("Error while loading RBAC",
-				zap.String("topic", "RBAC"),
+				zap.String("topic", "rbac"),
 				zap.String("method", "NewRBACManager"),
 				zap.String("filename", configurationFilenameRBAC),
 				zap.Error(err2),
@@ -96,7 +96,7 @@ func NewRBACManager(logger *zap.Logger, enableRBAC bool, configurationFilenameRB
 	} else {
 		logger.Info(
 			"RBAC is disabled in configuration",
-			zap.String("topic", "RBAC"),
+			zap.String("topic", "rbac"),
 			zap.String("method", "NewRBACManager"),
 		)
 	}

@@ -136,7 +136,7 @@ func (svc *Service) CreateStream(properties *StreamProperties) (*Stream, error) 
 
 func (svc *Service) saveStreamCatalog() error {
 	// save stream list
-	return svc.sp.SaveStreamCatalog(svc.GetStreamsUUIDs())
+	return svc.sp.SaveStreamCatalog()
 }
 
 func (svc *Service) DeleteStream(streamUUID StreamUUID) error {

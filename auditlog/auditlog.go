@@ -28,7 +28,7 @@ func RBACHandlerLogAccessGranted(c *fiber.Ctx) error {
 
 	log.Logger.Info(
 		"RBAC Access granted",
-		zap.String("topic", "RBAC"),
+		zap.String("topic", "rbac"),
 		zap.String("method", "RBACHandlerLogAccessGranted"),
 		zap.Any("rbac", m),
 		zap.String("accountId", claims["account"].(string)),
@@ -54,7 +54,7 @@ func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error, auditLogEnabled bool) err
 		if internalError {
 			log.Logger.Error(
 				"RBAC internal error",
-				zap.String("topic", "RBAC"),
+				zap.String("topic", "rbac"),
 				zap.String("method", "RBACHandlerLogAccessGranted"),
 				zap.Any("rbac", m),
 				zap.String("ipAddress", c.IP()),
@@ -71,7 +71,7 @@ func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error, auditLogEnabled bool) err
 			claims := token.Claims.(jwt.MapClaims)
 			log.Logger.Info(
 				"RBAC Access denied",
-				zap.String("topic", "RBAC"),
+				zap.String("topic", "rbac"),
 				zap.String("method", "RBACHandlerLogAccessGranted"),
 				zap.Any("rbac", m),
 				zap.String("accountId", claims["account"].(string)),
