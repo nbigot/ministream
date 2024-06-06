@@ -366,7 +366,7 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 			zap.Error(err),
 		)
 		// rollback the transaction
-		transaction.Rollback()
+		_ = transaction.Rollback()
 		return err
 	}
 
@@ -385,7 +385,7 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 			zap.Error(err),
 		)
 		// rollback the transaction
-		transaction.Rollback()
+		_ = transaction.Rollback()
 		return err
 	}
 

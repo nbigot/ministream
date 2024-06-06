@@ -122,7 +122,7 @@ func (w *StreamWriterMySQL) Write(records *[]types.DeferedStreamRecord) error {
 				zap.Error(err),
 			)
 			// rollback the transaction
-			transaction.Rollback()
+			_ = transaction.Rollback()
 			return err
 		}
 
