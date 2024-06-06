@@ -45,7 +45,7 @@ func main() {
 	}
 
 	fmt.Printf("Generate %d passwords\n", *count)
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	for i := 0; i < *count; i++ {
 		if randomSalt {
