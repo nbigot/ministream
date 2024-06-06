@@ -26,7 +26,9 @@ func (m *AccountManager) Initialize(logger *zap.Logger, account *config.Account)
 		)
 	}
 	if account.SecretAPIKey == "" {
+		// Generate a random SecretAPIKey because it is not set in the configuration file
 		account.SecretAPIKey = generators.GenerateRandomSecretAPIKey(32)
+		// Output the SecretAPIKey in the logs for the administrator to know it
 		logger.Info(
 			"Set random SecretAPIKey",
 			zap.String("topic", "account"),
