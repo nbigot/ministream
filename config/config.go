@@ -108,6 +108,16 @@ type Config struct {
 			MaxRecordsByStream uint64 `yaml:"maxRecordsByStream"`
 			MaxSize            string `yaml:"maxSize"`
 		} `yaml:"inmemory"`
+		MySQL struct {
+			// https://github.com/Go-SQL-Driver/MySQL/?tab=readme-ov-file#dsn-data-source-name
+			DataSourceName    string `yaml:"dsn" example:"user:password@tcp(localhost:3306)/ministream?tls=skip-verify"`
+			ConnMaxLifetime   uint   `yaml:"connMaxLifetime" example:"0"`
+			MaxIdleConns      uint   `yaml:"maxIdleConns" example:"3"`
+			MaxOpenConns      uint   `yaml:"maxOpenConns" example:"3"`
+			SchemaName        string `yaml:"schemaName" example:"ministream"`
+			CatalogTableName  string `yaml:"catalogTableName" example:"streams"`
+			StreamTablePrefix string `yaml:"streamTablePrefix" example:"stream_"`
+		} `yaml:"mysql"`
 	}
 	DataDirectory string     `yaml:"dataDirectory"`
 	LoggerConfig  zap.Config `yaml:"logger"`
@@ -119,7 +129,7 @@ type Config struct {
 		MaxIteratorsPerStream     int  `yaml:"maxAllowedIteratorsPerStream"`
 		MaxMessagePerGetOperation uint `yaml:"maxMessagePerGetOperation"`
 		LogVerbosity              int  `yaml:"logVerbosity"`
-		MaxAllowedStreams         uint `json:"maxAllowedStreams" example:"25"`
+		MaxAllowedStreams         uint `yaml:"maxAllowedStreams" example:"25"`
 	}
 	Auth AuthConfig `yaml:"auth"`
 	RBAC struct {

@@ -171,10 +171,20 @@ func (s *Stream) PutMessage(c *fasthttp.RequestCtx, message map[string]interface
 		return 0, errors.New("stream state is not running")
 	}
 	s.muIncMsgId.Lock()
-	s.info.LastMsgId += 1
-	msgId := s.info.LastMsgId
+	now := time.Now()
+	if s.info.IngestedMessages.CptMessages == 0 {
+		// first message ever of the stream
+		s.info.IngestedMessages.FirstMsgId = 1
+		s.info.IngestedMessages.LastMsgId = 0
+		s.info.IngestedMessages.FirstMsgTimestamp = now
+	}
+	s.info.IngestedMessages.LastMsgTimestamp = now
+	s.info.IngestedMessages.LastMsgId += 1
+	s.info.IngestedMessages.CptMessages += 1
+	s.info.IngestedMessages.SizeInBytes += uint64(len(fmt.Sprintf("%v", message)))
+	msgId := s.info.IngestedMessages.LastMsgId
+	s.ingestBuffer.PutMessage(msgId, now, message)
 	s.muIncMsgId.Unlock()
-	s.ingestBuffer.PutMessage(msgId, time.Now(), message)
 	return msgId, nil
 }
 
@@ -182,15 +192,29 @@ func (s *Stream) PutMessages(c *fasthttp.RequestCtx, records []interface{}) ([]M
 	if s.state != STREAM_STATE_RUNNING {
 		return nil, errors.New("stream state is not running")
 	}
-	msgIds := make([]MessageId, len(records))
-	for i, message := range records {
-		s.muIncMsgId.Lock()
-		s.info.LastMsgId += 1
-		msgId := s.info.LastMsgId
-		s.muIncMsgId.Unlock()
-		msgIds[i] = msgId
-		s.ingestBuffer.PutMessage(msgId, time.Now(), message)
+	cptRecords := len(records)
+	if cptRecords == 0 {
+		return nil, errors.New("no records to ingest")
 	}
+	msgIds := make([]MessageId, cptRecords)
+	s.muIncMsgId.Lock()
+	now := time.Now()
+	if s.info.IngestedMessages.CptMessages == 0 {
+		// first message ever of the stream
+		s.info.IngestedMessages.FirstMsgId = 1
+		s.info.IngestedMessages.LastMsgId = 0
+		s.info.IngestedMessages.FirstMsgTimestamp = now
+	}
+	for i, message := range records {
+		s.info.IngestedMessages.LastMsgTimestamp = now
+		s.info.IngestedMessages.LastMsgId += 1
+		s.info.IngestedMessages.CptMessages += 1
+		s.info.IngestedMessages.SizeInBytes += uint64(len(fmt.Sprintf("%v", message)))
+		msgId := s.info.IngestedMessages.LastMsgId
+		msgIds[i] = msgId
+		s.ingestBuffer.PutMessage(msgId, now, message)
+	}
+	s.muIncMsgId.Unlock()
 	return msgIds, nil
 }
 
@@ -334,11 +358,23 @@ func (s *Stream) Log() {
 		zap.String("stream.uuid", s.info.UUID.String()),
 		zap.Time("stream.creationDate", s.info.CreationDate),
 		zap.Time("stream.lastUpdate", s.info.LastUpdate),
-		zap.Uint64("stream.cptMessages", uint64(s.info.CptMessages)),
-		zap.String("stream.cptMessagesHumanized", humanize.Comma(int64(s.info.CptMessages))),
-		zap.Uint64("stream.sizeInBytes", uint64(s.info.SizeInBytes)),
-		zap.String("stream.sizeHumanized", humanize.Bytes(uint64(s.info.SizeInBytes))),
 		zap.Any("stream.properties", s.info.Properties),
+		zap.Uint64("stream.readableMessages.firstMsgId", uint64(s.info.ReadableMessages.FirstMsgId)),
+		zap.Uint64("stream.readableMessages.lastMsgId", uint64(s.info.ReadableMessages.LastMsgId)),
+		zap.Uint64("stream.readableMessages.firstMsgTimestamp", uint64(s.info.ReadableMessages.FirstMsgTimestamp.Unix())),
+		zap.Uint64("stream.readableMessages.lastMsgTimestamp", uint64(s.info.ReadableMessages.LastMsgTimestamp.Unix())),
+		zap.Uint64("stream.readableMessages.cptMessages", uint64(s.info.ReadableMessages.CptMessages)),
+		zap.String("stream.readableMessages.cptMessagesHumanized", humanize.Comma(int64(s.info.ReadableMessages.CptMessages))),
+		zap.Uint64("stream.readableMessages.sizeInBytes", uint64(s.info.ReadableMessages.SizeInBytes)),
+		zap.String("stream.readableMessages.sizeHumanized", humanize.Bytes(uint64(s.info.ReadableMessages.SizeInBytes))),
+		zap.Uint64("stream.ingestedMessages.firstMsgId", uint64(s.info.IngestedMessages.FirstMsgId)),
+		zap.Uint64("stream.ingestedMessages.lastMsgId", uint64(s.info.IngestedMessages.LastMsgId)),
+		zap.Uint64("stream.ingestedMessages.firstMsgTimestamp", uint64(s.info.IngestedMessages.FirstMsgTimestamp.Unix())),
+		zap.Uint64("stream.ingestedMessages.lastMsgTimestamp", uint64(s.info.IngestedMessages.LastMsgTimestamp.Unix())),
+		zap.Uint64("stream.ingestedMessages.cptMessages", uint64(s.info.IngestedMessages.CptMessages)),
+		zap.String("stream.ingestedMessages.cptMessagesHumanized", humanize.Comma(int64(s.info.IngestedMessages.CptMessages))),
+		zap.Uint64("stream.ingestedMessages.sizeInBytes", uint64(s.info.IngestedMessages.SizeInBytes)),
+		zap.String("stream.ingestedMessages.sizeHumanized", humanize.Bytes(uint64(s.info.IngestedMessages.SizeInBytes))),
 	)
 }
 

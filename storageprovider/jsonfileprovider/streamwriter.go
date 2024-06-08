@@ -175,27 +175,34 @@ func (w *StreamWriterFile) Write(records *[]types.DeferedStreamRecord) error {
 		)
 	}
 
+	if w.info.ReadableMessages.CptMessages == 0 {
+		// first message ever of the stream
+		w.info.ReadableMessages.FirstMsgId = w.info.IngestedMessages.FirstMsgId
+		w.info.ReadableMessages.LastMsgId = 0
+		w.info.ReadableMessages.FirstMsgTimestamp = (*records)[0].CreationDate
+	}
+
 	// process all records of the ingest buffer
-	for _, msg := range *records {
+	for _, record := range *records {
 		if w.logVerbosity > 1 {
 			w.logger.Debug(
 				"write record into file",
 				zap.String("topic", "stream"),
 				zap.String("method", "Write"),
 				zap.String("stream.uuid", w.info.UUID.String()),
-				zap.Any("msg", msg),
+				zap.Any("msg", record),
 			)
 		}
 
 		// serialize the record into a string
-		bytes, err := json.Marshal(msg)
+		bytes, err := json.Marshal(record)
 		if err != nil {
 			w.logger.Error(
 				"json",
 				zap.String("topic", "stream"),
 				zap.String("method", "Write"),
 				zap.String("stream.uuid", w.info.UUID.String()),
-				zap.Any("msg", msg),
+				zap.Any("msg", record),
 				zap.Error(err),
 			)
 			// drop the record (should never happen)
@@ -210,13 +217,14 @@ func (w *StreamWriterFile) Write(records *[]types.DeferedStreamRecord) error {
 		}
 
 		// update info
-		w.info.CptMessages += 1
-		w.info.SizeInBytes += types.Size64(len(bytes) + 1)
-		w.info.LastUpdate = msg.CreationDate
+		w.info.ReadableMessages.CptMessages += 1
+		w.info.ReadableMessages.LastMsgTimestamp = record.CreationDate
+		w.info.ReadableMessages.SizeInBytes += types.Size64(len(bytes) + 1)
+		w.info.ReadableMessages.LastMsgId = record.Id
 
 		// update the index file
 		// row format is: (<msg id>, <msg length in bytes>, <date>)
-		var data = streamRowIndex{msg.Id, int32(countBytesWritten), msg.CreationDate.Unix()}
+		var data = streamRowIndex{record.Id, int32(countBytesWritten), record.CreationDate.Unix()}
 		if err := binary.Write(w.fileIndex, binary.LittleEndian, data); err != nil {
 			return err
 		}

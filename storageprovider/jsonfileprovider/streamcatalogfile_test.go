@@ -8,9 +8,10 @@ import (
 )
 
 func TestCreateEmptyCatalogFile(t *testing.T) {
-	filepath := filepath.Join(t.TempDir(), "test_catalog.json")
+	tmpDir := t.TempDir()
+	filepath := filepath.Join(tmpDir, "test_catalog.json")
 	logger := zap.NewExample()
-	s := NewStreamCatalogFile(logger, filepath)
+	s := NewStreamCatalogFile(logger, tmpDir, filepath)
 	if err := s.CreateEmptyCatalogFile(); err != nil {
 		t.Fatalf("cound not create catalog file")
 	}

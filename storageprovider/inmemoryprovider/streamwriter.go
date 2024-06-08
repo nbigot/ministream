@@ -1,6 +1,7 @@
 package inmemoryprovider
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/nbigot/ministream/types"
@@ -56,6 +57,13 @@ func (w *StreamWriterInMemory) Write(records *[]types.DeferedStreamRecord) error
 		)
 	}
 
+	if w.info.ReadableMessages.CptMessages == 0 {
+		// first message ever of the stream
+		w.info.ReadableMessages.FirstMsgId = w.info.IngestedMessages.FirstMsgId
+		w.info.ReadableMessages.LastMsgId = 0
+		w.info.ReadableMessages.FirstMsgTimestamp = (*records)[0].CreationDate
+	}
+
 	// process all records of the ingest buffer
 	for _, record := range *records {
 		if w.logVerbosity > 1 {
@@ -74,8 +82,10 @@ func (w *StreamWriterInMemory) Write(records *[]types.DeferedStreamRecord) error
 		}
 
 		// update info
-		w.info.CptMessages += 1
-		w.info.LastUpdate = record.CreationDate
+		w.info.ReadableMessages.CptMessages += 1
+		w.info.ReadableMessages.LastMsgTimestamp = record.CreationDate
+		w.info.ReadableMessages.SizeInBytes += uint64(len(fmt.Sprintf("%v", record.Msg)))
+		w.info.ReadableMessages.LastMsgId = record.Id
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"github.com/nbigot/ministream/storageprovider"
 	"github.com/nbigot/ministream/storageprovider/inmemoryprovider"
 	"github.com/nbigot/ministream/storageprovider/jsonfileprovider"
+	"github.com/nbigot/ministream/storageprovider/mysqlprovider"
 	"go.uber.org/zap"
 )
 
@@ -60,6 +61,11 @@ func SetupStorageProviders() error {
 	}
 
 	err = Register("InMemory", inmemoryprovider.NewStorageProvider)
+	if err != nil {
+		return err
+	}
+
+	err = Register("MySQL", mysqlprovider.NewStorageProvider)
 	if err != nil {
 		return err
 	}

@@ -26,7 +26,7 @@ func GenerateRandomSecretAPIKey(length int) string {
 
 func GenerateRandomString(length int, chars []rune, initSeed bool) string {
 	if initSeed {
-		rand.Seed(time.Now().UnixNano())
+		rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
 	var b strings.Builder
 	for i := 0; i < length; i++ {

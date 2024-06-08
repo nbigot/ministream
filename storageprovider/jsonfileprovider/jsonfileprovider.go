@@ -1,7 +1,6 @@
 package jsonfileprovider
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/nbigot/ministream/storageprovider/catalog"
 	"github.com/nbigot/ministream/types"
 
-	"github.com/goccy/go-json"
 	"github.com/google/uuid"
 
 	"go.uber.org/zap"
@@ -68,11 +66,7 @@ func (s *FileStorage) GenerateNewStreamUuid() types.StreamUUID {
 }
 
 func (s *FileStorage) StreamExists(streamUUID types.StreamUUID) bool {
-	filename := s.GetMetaDataFilePath(streamUUID)
-	if _, err := os.Stat(filename); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
+	return s.catalog.StreamExists(streamUUID)
 }
 
 func (s *FileStorage) LoadStreams() (types.StreamInfoList, error) {
@@ -104,18 +98,21 @@ func (s *FileStorage) LoadStreams() (types.StreamInfoList, error) {
 	return l, nil
 }
 
-func (s *FileStorage) SaveStreamCatalog(streamUUIDs types.StreamUUIDList) error {
-	return s.catalog.SaveStreamCatalog(streamUUIDs)
+func (s *FileStorage) SaveStreamCatalog() error {
+	return s.catalog.SaveStreamCatalog()
 }
 
 func (s *FileStorage) OnCreateStream(info *types.StreamInfo) error {
-	return s.CreateStreamDirectory(info.UUID)
+	if err := s.CreateStreamDirectory(info.UUID); err != nil {
+		return err
+	}
+	return s.catalog.OnCreateStream(info)
 }
 
 func (s *FileStorage) LoadStreamsFromUUIDs(streamUUIDs types.StreamUUIDList) (types.StreamInfoList, error) {
 	infos := make(types.StreamInfoList, len(streamUUIDs))
 	for idx, streamUUID := range streamUUIDs {
-		if info, err := s.LoadStreamFromUUID(streamUUID); err != nil {
+		if info, err := s.GetStreamInfo(streamUUID); err != nil {
 			return nil, err
 		} else {
 			infos[idx] = info
@@ -124,39 +121,8 @@ func (s *FileStorage) LoadStreamsFromUUIDs(streamUUIDs types.StreamUUIDList) (ty
 	return infos, nil
 }
 
-func (s *FileStorage) LoadStreamFromUUID(streamUUID types.StreamUUID) (*types.StreamInfo, error) {
-	s.logger.Info(
-		"Loading stream",
-		zap.String("topic", "stream"),
-		zap.String("method", "LoadStreamFromUUID"),
-		zap.String("stream.uuid", streamUUID.String()),
-	)
-	info := types.StreamInfo{}
-
-	var filename = s.GetMetaDataFilePath(streamUUID)
-	file, err := os.Open(filename)
-	if err != nil {
-		s.logger.Error("Can't open stream",
-			zap.String("topic", "stream"),
-			zap.String("method", "LoadStreamFromUUID"),
-			zap.String("filename", filename), zap.Error(err),
-		)
-		return nil, err
-	}
-	defer file.Close()
-
-	jsonDecoder := json.NewDecoder(file)
-	err = jsonDecoder.Decode(&info)
-	if err != nil {
-		s.logger.Error("Can't decode json stream",
-			zap.String("topic", "stream"),
-			zap.String("method", "LoadStreamFromUUID"),
-			zap.String("filename", filename), zap.Error(err),
-		)
-		return nil, err
-	}
-
-	return &info, nil
+func (s *FileStorage) GetStreamInfo(streamUUID types.StreamUUID) (*types.StreamInfo, error) {
+	return s.catalog.GetStreamInfo(streamUUID)
 }
 
 func (s *FileStorage) GetDataDirectory() string {
@@ -201,7 +167,10 @@ func (s *FileStorage) NewStreamIteratorHandler(streamUUID types.StreamUUID, iter
 }
 
 func (s *FileStorage) DeleteStream(streamUUID types.StreamUUID) error {
-	return os.RemoveAll(s.GetStreamDirectoryPath(streamUUID))
+	if err := os.RemoveAll(s.GetStreamDirectoryPath(streamUUID)); err != nil {
+		return err
+	}
+	return s.catalog.OnDeleteStream(streamUUID)
 }
 
 func (s *FileStorage) NewStreamWriter(info *types.StreamInfo) (buffering.IStreamWriter, error) {
@@ -222,6 +191,6 @@ func NewStorageProvider(logger *zap.Logger, conf *config.Config) (storageprovide
 		logger:        logger,
 		logVerbosity:  conf.Storage.LogVerbosity,
 		dataDirectory: conf.Storage.JSONFile.DataDirectory,
-		catalog:       NewStreamCatalogFile(logger, GetStreamCatalogFilepath(conf.Storage.JSONFile.DataDirectory)),
+		catalog:       NewStreamCatalogFile(logger, conf.Storage.JSONFile.DataDirectory, GetStreamCatalogFilepath(conf.Storage.JSONFile.DataDirectory)),
 	}, nil
 }

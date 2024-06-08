@@ -3,10 +3,14 @@ package stream
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"time"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/types"
 	. "github.com/nbigot/ministream/types"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/goccy/go-json"
 	"github.com/itchyny/gojq"
@@ -28,14 +32,15 @@ type StreamIteratorStats struct {
 }
 
 type StreamIterator struct {
-	streamUUID       StreamUUID
-	itUUID           StreamIteratorUUID
-	request          *StreamIteratorRequest
-	jqFilter         *gojq.Query
-	LastRecordIdRead MessageId
-	Stats            StreamIteratorStats
-	handler          IStreamIteratorHandler
-	logger           *zap.Logger
+	streamUUID         StreamUUID
+	itUUID             StreamIteratorUUID
+	request            *StreamIteratorRequest
+	jqFilter           *gojq.Query
+	LastRecordIdRead   MessageId
+	Stats              StreamIteratorStats
+	handler            IStreamIteratorHandler
+	getRecordsBusyFlag atomic.Bool
+	logger             *zap.Logger
 	// TODO: add timeout (self delete at timeout)
 }
 
@@ -91,6 +96,27 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 	defer func() {
 		response.Duration = time.Since(startTime).Milliseconds()
 	}()
+
+	// check mutex
+	if it.getRecordsBusyFlag.Load() {
+		// if the flag is already set, then the iterator is busy,
+		// therefore, return a busy status to tell the client to retry later
+
+		apiErr := apierror.APIError{
+			StreamUUID: it.streamUUID,
+			Message:    "cannot get records",
+			Details:    "iterator is busy, retry later",
+			Code:       constants.ErrorStreamIteratorIsBusy,
+			HttpCode:   fiber.StatusTooEarly,
+			Err:        nil,
+		}
+
+		response.Status = "error"
+		return &response, &apiErr
+	}
+
+	defer it.getRecordsBusyFlag.Store(false)
+	it.getRecordsBusyFlag.Store(true)
 
 	if err = it.Seek(); err != nil {
 		response.Status = "error"

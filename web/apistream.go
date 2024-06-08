@@ -551,6 +551,11 @@ func (w *WebAPIServer) GetRecords(c *fiber.Ctx) error {
 
 	response, err2 := streamPtr.GetRecords(c.Context(), iteratorUuid, maxRecords)
 	if err2 != nil {
+		// check if err2 is an apieror.APIError
+		if apiErr, ok := err2.(*apierror.APIError); ok {
+			return apiErr.HTTPResponse(c)
+		}
+
 		httpError := apierror.APIError{
 			StreamUUID: streamUUID,
 			Message:    "cannot get records",
@@ -581,6 +586,29 @@ func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 	startTime := time.Now()
 	payload := map[string]interface{}{}
 
+	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
+	if apiErr != nil {
+		return apiErr.HTTPResponse(c)
+	}
+
+	// check batch id for deduplication
+	batch_id := c.Get("x-ministream-batch-id", "")
+	if batch_id != "" {
+		dedup_id := fmt.Sprintf("%s:%s", streamPtr.GetUUID().String(), batch_id)
+		if w.reqDedupManager.Exists(dedup_id) {
+			httpError := apierror.APIError{
+				Message:    "batch id already processed",
+				Details:    fmt.Sprintf("x-ministream-batch-id: %s", batch_id),
+				Code:       constants.ErrorDuplicatedBatchId,
+				HttpCode:   fiber.StatusBadRequest,
+				StreamUUID: streamPtr.GetUUID(),
+				Err:        nil,
+			}
+			return httpError.HTTPResponse(c)
+		}
+		w.reqDedupManager.Add(dedup_id)
+	}
+
 	if err := c.BodyParser(&payload); err != nil {
 		httpError := apierror.APIError{
 			Message:  "invalid json body format",
@@ -590,11 +618,6 @@ func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 			Err:      err,
 		}
 		return httpError.HTTPResponse(c)
-	}
-
-	_, streamPtr, apiErr := w.GetStreamFromParameter(c)
-	if apiErr != nil {
-		return apiErr.HTTPResponse(c)
 	}
 
 	singleMessageId, err2 := streamPtr.PutMessage(c.Context(), payload)
@@ -641,6 +664,24 @@ func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
+	// check batch id for deduplication
+	batch_id := c.Get("x-ministream-batch-id", "")
+	dedup_id := fmt.Sprintf("%s:%s", streamPtr.GetUUID().String(), batch_id)
+	if batch_id != "" {
+		if w.reqDedupManager.Exists(dedup_id) {
+			httpError := apierror.APIError{
+				Message:    "batch id already processed",
+				Details:    fmt.Sprintf("x-ministream-batch-id: %s", batch_id),
+				Code:       constants.ErrorDuplicatedBatchId,
+				HttpCode:   fiber.StatusBadRequest,
+				StreamUUID: streamPtr.GetUUID(),
+				Err:        nil,
+			}
+			return httpError.HTTPResponse(c)
+		}
+		w.reqDedupManager.Add(dedup_id)
+	}
+
 	// jsonlines (without [])
 	ctype := utils.ToLower(utils.UnsafeString(c.Request().Header.ContentType()))
 	if ctype == "application/jsonlines" || ctype == "application/x-ndjson" {
@@ -662,6 +703,7 @@ func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 
 		jsonBuffer = append(jsonBuffer, []byte("]")...)
 		if err = c.App().Config().JSONDecoder(jsonBuffer, &payload); err != nil {
+			w.reqDedupManager.Remove(dedup_id)
 			httpError := apierror.APIError{
 				Message:    "invalid jsonlines body format",
 				Details:    err.Error(),
@@ -675,6 +717,7 @@ func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 	} else {
 		// standard json array (with [])
 		if err = c.BodyParser(&payload); err != nil {
+			w.reqDedupManager.Remove(dedup_id)
 			httpError := apierror.APIError{
 				Message:    "invalid json body format",
 				Details:    err.Error(),
@@ -689,6 +732,7 @@ func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 
 	messageIds, err2 := streamPtr.PutMessages(c.Context(), payload)
 	if err2 != nil {
+		w.reqDedupManager.Remove(dedup_id)
 		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err2.Error(),
@@ -842,12 +886,13 @@ func convertStreamListToJsonResult(streams *[]*stream.Stream) *JSONResultListStr
 			r,
 			JSONResultListStreamsPropertiesResultRow{
 				UUID:         info.UUID,
-				CptMessages:  info.CptMessages,
-				SizeInBytes:  info.SizeInBytes,
 				CreationDate: info.CreationDate,
 				LastUpdate:   info.LastUpdate,
 				Properties:   info.Properties,
-				LastMsgId:    info.LastMsgId,
+				CptMessages:  info.ReadableMessages.CptMessages,
+				SizeInBytes:  info.ReadableMessages.SizeInBytes,
+				FirstMsgId:   info.ReadableMessages.FirstMsgId,
+				LastMsgId:    info.ReadableMessages.LastMsgId,
 			},
 		)
 	}

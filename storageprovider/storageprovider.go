@@ -10,10 +10,10 @@ type IStorageProvider interface {
 	Stop() error
 	GenerateNewStreamUuid() types.StreamUUID
 	StreamExists(streamUUID types.StreamUUID) bool
-	SaveStreamCatalog(streamUUIDs types.StreamUUIDList) error
+	SaveStreamCatalog() error
 	LoadStreams() (types.StreamInfoList, error)
 	OnCreateStream(*types.StreamInfo) error
-	LoadStreamFromUUID(streamUUID types.StreamUUID) (*types.StreamInfo, error)
+	GetStreamInfo(streamUUID types.StreamUUID) (*types.StreamInfo, error)
 	BuildIndex(streamUUID types.StreamUUID) (interface{}, error)
 	NewStreamIteratorHandler(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID) (types.IStreamIteratorHandler, error)
 	NewStreamWriter(*types.StreamInfo) (buffering.IStreamWriter, error)

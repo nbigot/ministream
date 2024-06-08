@@ -56,11 +56,16 @@ storage:
             - "stdout"
         initialFields:
             app: "ministream"
-            storage.provider: "InMemory"
+            storage.provider: "MySQL"
     logVerbosity: 0
-    type: "InMemory"  # "JSONFile" "InMemory"
-    jsonfile:
-        #dataDirectory: "/app/data/storage"
+    type: "MySQL"
+    mysql:
+        dsn: "ministream:ministream@tcp(localhost:3306)/ministream?tls=skip-verify"
+        connMaxLifetime: 0
+        maxOpenConns: 3
+        maxIdleConns: 3
+        schemaName: "ministream"
+        catalogTableName: "streams"
     inmemory:
         maxRecordsByStream: 0
         maxSize: "1gb"

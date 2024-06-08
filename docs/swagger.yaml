@@ -138,23 +138,40 @@ definitions:
     type: object
   types.StreamInfo:
     properties:
-      cptMessages:
-        example: 12345
-        type: integer
       creationDate:
         type: string
-      lastMsgId:
-        type: integer
+      ingestedMessages:
+        allOf:
+        - $ref: '#/definitions/types.StreamMessagesInfo'
+        description: messages that have been ingested in the stream
       lastUpdate:
         type: string
       properties:
         $ref: '#/definitions/types.StreamProperties'
-      sizeInBytes:
-        example: 4567890
-        type: integer
+      readableMessages:
+        allOf:
+        - $ref: '#/definitions/types.StreamMessagesInfo'
+        description: messages that are readable by a consumer
       uuid:
         example: 4ce589e2-b483-467b-8b59-758b339801db
         type: string
+    type: object
+  types.StreamMessagesInfo:
+    properties:
+      cptMessages:
+        example: 12345
+        type: integer
+      fastMsgTimestamp:
+        type: string
+      firstMsgId:
+        type: integer
+      firstMsgTimestamp:
+        type: string
+      lastMsgId:
+        type: integer
+      sizeInBytes:
+        example: 4567890
+        type: integer
     type: object
   types.StreamProperties:
     additionalProperties: true
@@ -203,6 +220,8 @@ definitions:
         type: integer
       creationDate:
         type: string
+      firstMsgId:
+        type: integer
       lastMsgId:
         type: integer
       lastUpdate:

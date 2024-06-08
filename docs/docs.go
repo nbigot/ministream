@@ -1215,15 +1215,16 @@ const docTemplate = `{
         "types.StreamInfo": {
             "type": "object",
             "properties": {
-                "cptMessages": {
-                    "type": "integer",
-                    "example": 12345
-                },
                 "creationDate": {
                     "type": "string"
                 },
-                "lastMsgId": {
-                    "type": "integer"
+                "ingestedMessages": {
+                    "description": "messages that have been ingested in the stream",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.StreamMessagesInfo"
+                        }
+                    ]
                 },
                 "lastUpdate": {
                     "type": "string"
@@ -1231,13 +1232,42 @@ const docTemplate = `{
                 "properties": {
                     "$ref": "#/definitions/types.StreamProperties"
                 },
-                "sizeInBytes": {
-                    "type": "integer",
-                    "example": 4567890
+                "readableMessages": {
+                    "description": "messages that are readable by a consumer",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.StreamMessagesInfo"
+                        }
+                    ]
                 },
                 "uuid": {
                     "type": "string",
                     "example": "4ce589e2-b483-467b-8b59-758b339801db"
+                }
+            }
+        },
+        "types.StreamMessagesInfo": {
+            "type": "object",
+            "properties": {
+                "cptMessages": {
+                    "type": "integer",
+                    "example": 12345
+                },
+                "fastMsgTimestamp": {
+                    "type": "string"
+                },
+                "firstMsgId": {
+                    "type": "integer"
+                },
+                "firstMsgTimestamp": {
+                    "type": "string"
+                },
+                "lastMsgId": {
+                    "type": "integer"
+                },
+                "sizeInBytes": {
+                    "type": "integer",
+                    "example": 4567890
                 }
             }
         },
@@ -1308,6 +1338,9 @@ const docTemplate = `{
                 },
                 "creationDate": {
                     "type": "string"
+                },
+                "firstMsgId": {
+                    "type": "integer"
                 },
                 "lastMsgId": {
                     "type": "integer"

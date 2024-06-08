@@ -6,27 +6,47 @@ import (
 	"github.com/itchyny/gojq"
 )
 
+type StreamMessagesInfo struct {
+	CptMessages       Size64    `json:"cptMessages" example:"12345"`
+	SizeInBytes       Size64    `json:"sizeInBytes" example:"4567890"`
+	FirstMsgId        MessageId `json:"firstMsgId"`
+	LastMsgId         MessageId `json:"lastMsgId"`
+	FirstMsgTimestamp time.Time `json:"firstMsgTimestamp"`
+	LastMsgTimestamp  time.Time `json:"fastMsgTimestamp"`
+}
+
 type StreamInfo struct {
-	UUID         StreamUUID       `json:"uuid" example:"4ce589e2-b483-467b-8b59-758b339801db"`
-	CptMessages  Size64           `json:"cptMessages" example:"12345"`
-	SizeInBytes  Size64           `json:"sizeInBytes" example:"4567890"`
-	CreationDate time.Time        `json:"creationDate"`
-	LastUpdate   time.Time        `json:"lastUpdate"`
-	Properties   StreamProperties `json:"properties"`
-	LastMsgId    MessageId        `json:"lastMsgId"`
+	UUID             StreamUUID         `json:"uuid" example:"4ce589e2-b483-467b-8b59-758b339801db"`
+	CreationDate     time.Time          `json:"creationDate"`
+	LastUpdate       time.Time          `json:"lastUpdate"`
+	Properties       StreamProperties   `json:"properties"`
+	IngestedMessages StreamMessagesInfo `json:"ingestedMessages"` // messages that have been ingested in the stream
+	ReadableMessages StreamMessagesInfo `json:"readableMessages"` // messages that are readable by a consumer
 }
 
 type StreamInfoList []*StreamInfo
 
+type StreamInfoDict map[StreamUUID]*StreamInfo
+
 func NewStreamInfo(uuid StreamUUID) *StreamInfo {
+	now := time.Now()
 	return &StreamInfo{
 		UUID:         uuid,
-		CreationDate: time.Now(),
-		LastUpdate:   time.Now(),
-		LastMsgId:    0,
-		CptMessages:  0,
-		SizeInBytes:  0,
+		CreationDate: now,
+		LastUpdate:   now,
 		Properties:   StreamProperties{},
+		IngestedMessages: StreamMessagesInfo{
+			CptMessages: 0,
+			SizeInBytes: 0,
+			FirstMsgId:  0,
+			LastMsgId:   0,
+		},
+		ReadableMessages: StreamMessagesInfo{
+			CptMessages: 0,
+			SizeInBytes: 0,
+			FirstMsgId:  0,
+			LastMsgId:   0,
+		},
 	}
 }
 

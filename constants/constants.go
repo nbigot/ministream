@@ -10,6 +10,7 @@ const ErrorInvalidJQFilter = 1004
 const ErrorInvalidIteratorUuid = 1005
 const ErrorInvalidParameterValue = 1006
 const ErrorCantDeserializeJson = 1007
+const ErrorDuplicatedBatchId = 1008
 
 const ErrorCantPutMessageIntoStream = 1010
 const ErrorCantPutMessagesIntoStream = 1011
@@ -21,6 +22,7 @@ const ErrorCantGetMessagesFromStream = 1020
 
 const ErrorCantCloseStreamIterator = 1030
 const ErrorStreamIteratorNotFound = 1031
+const ErrorStreamIteratorIsBusy = 1032
 
 const ErrorCantRebuildStreamIndex = 1040
 
