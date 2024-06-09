@@ -39,10 +39,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       -
         name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+        uses: goreleaser/goreleaser-action@v5
         with:
-          distribution: goreleaser # or 'goreleaser-pro'
-          version: "~> v2"
+          # either 'goreleaser' (default) or 'goreleaser-pro'
+          distribution: goreleaser
+          version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
