@@ -12,6 +12,7 @@ import (
 
 	"github.com/nbigot/ministream/auditlog"
 	"github.com/nbigot/ministream/config"
+	_ "github.com/nbigot/ministream/docs"
 	"github.com/nbigot/ministream/rbac"
 	"github.com/nbigot/ministream/service"
 )
@@ -106,6 +107,8 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 	}
 
 	if w.appConfig.WebServer.Swagger.Enable {
+		// example of url to swagger gui: "http://127.0.0.1:8080/docs/index.html"
+		// url to swagger json document: "http://127.0.0.1:8080/docs/doc.json"
 		// Create swagger routes group.
 		apiSwagger := app.Group("/docs")
 

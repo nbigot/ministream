@@ -20,7 +20,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/account": {
+        "/api/v1/account/": {
             "get": {
                 "description": "Get account details",
                 "consumes": [
@@ -218,7 +218,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/stream": {
+        "/api/v1/stream/": {
             "post": {
                 "description": "Create a new stream",
                 "consumes": [
@@ -780,7 +780,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/streams": {
+        "/api/v1/streams/": {
             "get": {
                 "description": "Get the list of all streams UUIDs",
                 "consumes": [
@@ -919,7 +919,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/v1/users": {
+        "/api/v1/users/": {
             "get": {
                 "description": "Get the list of users",
                 "consumes": [
@@ -938,6 +938,12 @@ const docTemplate = `{
                         "description": "successful operation",
                         "schema": {
                             "$ref": "#/definitions/web.JSONResultListUsers"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_nbigot_ministream_web_apierror.APIError"
                         }
                     }
                 }

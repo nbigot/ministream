@@ -36,6 +36,7 @@ const ErrorJWTNotEnabled = 1202
 const ErrorJWTRBACUnknownRole = 1210
 const ErrorRBACInvalidRule = 1211
 const ErrorRBACForbidden = 1212
+const ErrorRBACNotEnabled = 1213
 const ErrorAuthInternalError = 1220
 const ErrorWrongCredentials = 1230
 

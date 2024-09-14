@@ -103,11 +103,7 @@ webserver:
         #certFile: "/app/certs/cert.pem"
         #keyFile: "/app/certs/key.pem"
     swagger:
-        enable: false
-        https: false
-        address: "127.0.0.1:8081"
-        certFile: ""
-        keyFile: ""
+        enable: true
 logger:
     level: "info"
     development: false
