@@ -28,7 +28,7 @@ type GetAccountHTTPJsonResult struct {
 // @Produce json
 // @Tags Account
 // @success 200 {object} web.JSONResult{data=web.GetAccountHTTPJsonResult{}} "successful operation"
-// @Router /api/v1/account [get]
+// @Router /api/v1/account/ [get]
 func (w *WebAPIServer) GetAccount(c *fiber.Ctx) error {
 	// hide field secretAPIKey
 	account := account.AccountMgr.GetAccount()

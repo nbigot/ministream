@@ -22,8 +22,18 @@ import (
 // @Produce json
 // @Tags User
 // @Success 200 {object} web.JSONResultListUsers "successful operation"
-// @Router /api/v1/users [get]
+// @Success 400 {object} apierror.APIError
+// @Router /api/v1/users/ [get]
 func (w *WebAPIServer) ListUsers(c *fiber.Ctx) error {
+	if !w.appConfig.RBAC.Enable {
+		httpError := apierror.APIError{
+			Message:  "bad Request",
+			Details:  "RBAC is not enabled on server",
+			Code:     constants.ErrorRBACNotEnabled,
+			HttpCode: fiber.StatusBadRequest,
+		}
+		return httpError.HTTPResponse(c)
+	}
 	return c.JSON(JSONResultListUsers{Code: fiber.StatusOK, Users: rbac.RbacMgr.Rbac.GetUserList()})
 }
 

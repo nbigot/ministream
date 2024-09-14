@@ -34,7 +34,7 @@ import (
 // @Param jq query string false "string jq filter" example(".name == \"test 8\"")
 // @Success 200 {array} types.StreamUUID "successful operation"
 // @Failure 403 {object} apierror.APIError
-// @Router /api/v1/streams [get]
+// @Router /api/v1/streams/ [get]
 func (w *WebAPIServer) ListStreams(c *fiber.Ctx) error {
 	var jq *gojq.Query
 	var err error
@@ -122,7 +122,7 @@ func (w *WebAPIServer) ListStreamsProperties(c *fiber.Ctx) error {
 // @Tags Stream
 // @Success 201 {array} types.StreamInfo
 // @Success 400 {object} apierror.APIError
-// @Router /api/v1/stream [post]
+// @Router /api/v1/stream/ [post]
 func (w *WebAPIServer) CreateStream(c *fiber.Ctx) error {
 	payload := struct {
 		Properties map[string]string `json:"properties" validate:"required,lte=32,dive,keys,gt=0,lte=64,endkeys,max=128,required"`

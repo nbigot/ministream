@@ -301,7 +301,7 @@ info:
   title: MiniStream API
   version: "1.0"
 paths:
-  /api/v1/account:
+  /api/v1/account/:
     get:
       consumes:
       - application/json
@@ -430,7 +430,7 @@ paths:
       summary: Shutdown server
       tags:
       - Admin
-  /api/v1/stream:
+  /api/v1/stream/:
     post:
       consumes:
       - application/json
@@ -814,7 +814,7 @@ paths:
       summary: Rebuild the stream index
       tags:
       - Stream
-  /api/v1/streams:
+  /api/v1/streams/:
     get:
       consumes:
       - application/json
@@ -907,7 +907,7 @@ paths:
       summary: Logs user into the system
       tags:
       - User
-  /api/v1/users:
+  /api/v1/users/:
     get:
       consumes:
       - application/json
@@ -920,6 +920,10 @@ paths:
           description: successful operation
           schema:
             $ref: '#/definitions/web.JSONResultListUsers'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_nbigot_ministream_web_apierror.APIError'
       summary: List users
       tags:
       - User
