@@ -664,7 +664,7 @@ func (w *WebAPIServer) PutRecords(c *fiber.Ctx) error {
 		return apiErr.HTTPResponse(c)
 	}
 
-	// check batch id for deduplication
+	// check batch id for batch deduplication
 	batch_id := c.Get("x-ministream-batch-id", "")
 	dedup_id := fmt.Sprintf("%s:%s", streamPtr.GetUUID().String(), batch_id)
 	if batch_id != "" {

@@ -79,9 +79,11 @@ func (s *Server) Start() error {
 	if s.status != ServerStatusInitialized {
 		return fmt.Errorf("cannot start server: invalid status code %d", s.status)
 	}
+	s.webAPIServer.StartServer()
 	s.SetStatus(ServerStatusRunning)
 	s.Listen()
 	err := s.HandleSignals()
+	// server is stopped
 	s.SetStatus(ServerStatusInitialized)
 	return err
 }

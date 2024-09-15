@@ -122,12 +122,16 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 }
 
 func (w *WebAPIServer) ShutdownServer() {
-	w.reqDedupManager.Stop()
+	_ = w.reqDedupManager.Stop()
 	w.funcShutdownServer()
 }
 
+func (w *WebAPIServer) StartServer() {
+	w.reqDedupManager.Init()
+}
+
 func (w *WebAPIServer) RestartServer() {
-	w.reqDedupManager.Stop()
+	_ = w.reqDedupManager.Stop()
 	w.reqDedupManager.Init()
 	w.funcRestartServer()
 }
