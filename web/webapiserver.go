@@ -126,6 +126,10 @@ func (w *WebAPIServer) ShutdownServer() {
 	w.funcShutdownServer()
 }
 
+func (w *WebAPIServer) StartServer() {
+	w.reqDedupManager.Init()
+}
+
 func (w *WebAPIServer) RestartServer() {
 	w.reqDedupManager.Stop()
 	w.reqDedupManager.Init()
