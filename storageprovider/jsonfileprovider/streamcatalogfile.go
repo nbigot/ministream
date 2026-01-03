@@ -141,7 +141,9 @@ func (s *StreamCatalogFile) LoadStreamCatalog() (types.StreamUUIDList, error) {
 		)
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// load the list of streams UUIDs
 	obj := streamListSerializeStruct{}
@@ -178,7 +180,7 @@ func (s *StreamCatalogFile) LoadStreamCatalog() (types.StreamUUIDList, error) {
 
 func (s *StreamCatalogFile) GetStreamsUUIDs() types.StreamUUIDList {
 	s.mu.Lock()
-	var streamsUUIDs types.StreamUUIDList = make(types.StreamUUIDList, 0)
+	var streamsUUIDs = make(types.StreamUUIDList, 0)
 	for streamUUID := range s.streams {
 		streamsUUIDs = append(streamsUUIDs, streamUUID)
 	}
@@ -234,7 +236,9 @@ func (s *StreamCatalogFile) LoadStreamFromUUID(streamUUID types.StreamUUID) (*ty
 		)
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	jsonDecoder := json.NewDecoder(file)
 	err = jsonDecoder.Decode(&info)

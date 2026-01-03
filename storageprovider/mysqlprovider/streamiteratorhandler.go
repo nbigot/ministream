@@ -133,7 +133,9 @@ func (h *StreamIteratorHandlerMySQL) fillBuffer() error {
 		)
 		return err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	// reset the buffer but keep the capacity
 	h.buffer = h.buffer[:0]

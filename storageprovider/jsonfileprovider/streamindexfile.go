@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/nbigot/ministream/types"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/goccy/go-json"
 	"github.com/google/uuid"
@@ -31,14 +31,14 @@ type StreamIndexFile struct {
 type StreamIndexStats struct {
 	CptMessages       int64
 	FileSize          int64
-	FirstMsgId        MessageId
-	LastMsgId         MessageId
+	FirstMsgId        types.MessageId
+	LastMsgId         types.MessageId
 	FirstMsgTimestamp time.Time
 	LastMsgTimestamp  time.Time
 }
 
 type streamIndexRowMsg struct {
-	Id                MessageId
+	Id                types.MessageId
 	LengthInBytes     int64
 	Offset            int64
 	TimestampUnixNano int64
@@ -78,7 +78,9 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 	if err != nil {
 		return nil, err
 	}
-	defer streamDataFile.Close()
+	defer func() {
+		_ = streamDataFile.Close()
+	}()
 
 	idx.file, err = os.OpenFile(idx.filename, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
@@ -98,7 +100,7 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 	}()
 
 	var msgOffset MsgOffset = 0
-	var message *DeferedStreamRecord = nil
+	var message *types.DeferedStreamRecord = nil
 	row := streamIndexRowMsg{}
 
 	reader := bufio.NewReaderSize(streamDataFile, 1024*1024)
@@ -200,11 +202,11 @@ func (idx *StreamIndexFile) BuildIndex(dataFilePath string) (*StreamIndexStats, 
 	return &stats, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetFirstMessage() (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetFirstMessage() (types.MessageId, MsgOffset, error) {
 	return 0, 0, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetLastMessage() (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetLastMessage() (types.MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
 		return 0, 0, err
@@ -213,7 +215,7 @@ func (idx *StreamIndexFile) GetOffsetLastMessage() (MessageId, MsgOffset, error)
 	return row.Id, row.Offset, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (types.MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetMessage(-sizeOfStreamIndexRowMsg, io.SeekEnd)
 	if err != nil {
 		return 0, 0, err
@@ -222,7 +224,7 @@ func (idx *StreamIndexFile) GetOffsetAfterLastMessage() (MessageId, MsgOffset, e
 	return row.Id + 1, row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId MessageId) (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId types.MessageId) (types.MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
 		return 0, 0, err
@@ -231,7 +233,7 @@ func (idx *StreamIndexFile) GetOffsetAtMessageId(messageId MessageId) (MessageId
 	return row.Id, row.Offset, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId MessageId) (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId types.MessageId) (types.MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(&messageId, nil)
 	if err != nil {
 		return 0, 0, err
@@ -240,7 +242,7 @@ func (idx *StreamIndexFile) GetOffsetAfterMessageId(messageId MessageId) (Messag
 	return row.Id + 1, row.Offset + row.LengthInBytes, nil
 }
 
-func (idx *StreamIndexFile) GetOffsetAtTimestamp(timestamp *time.Time) (MessageId, MsgOffset, error) {
+func (idx *StreamIndexFile) GetOffsetAtTimestamp(timestamp *time.Time) (types.MessageId, MsgOffset, error) {
 	row, err := idx.getOffsetAt(nil, timestamp)
 	if err != nil {
 		return 0, 0, err
@@ -265,7 +267,9 @@ func (idx *StreamIndexFile) getOffsetMessage(seekOffset int64, seekWhence int) (
 		)
 		return nil, err
 	}
-	defer idx.file.Close()
+	defer func() {
+		_ = idx.file.Close()
+	}()
 
 	if _, err = idx.file.Seek(seekOffset, seekWhence); err != nil {
 		idx.logger.Error(
@@ -295,7 +299,7 @@ func (idx *StreamIndexFile) getOffsetMessage(seekOffset int64, seekWhence int) (
 	return &row, nil
 }
 
-func (idx *StreamIndexFile) getOffsetAt(messageId *MessageId, timestamp *time.Time) (*streamIndexRowMsg, error) {
+func (idx *StreamIndexFile) getOffsetAt(messageId *types.MessageId, timestamp *time.Time) (*streamIndexRowMsg, error) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -311,7 +315,9 @@ func (idx *StreamIndexFile) getOffsetAt(messageId *MessageId, timestamp *time.Ti
 		)
 		return nil, err
 	}
-	defer idx.file.Close()
+	defer func() {
+		_ = idx.file.Close()
+	}()
 
 	var indexRowsCount int64
 	if indexRowsCount, err = idx.getIndexRowsCount(); err != nil {
@@ -331,7 +337,7 @@ func (idx *StreamIndexFile) getOffsetAt(messageId *MessageId, timestamp *time.Ti
 	}
 }
 
-func (idx *StreamIndexFile) searchMessageId(messageId MessageId, lastIndexRank int64, row *streamIndexRowMsg) error {
+func (idx *StreamIndexFile) searchMessageId(messageId types.MessageId, lastIndexRank int64, row *streamIndexRowMsg) error {
 	// use a dichotomy algorithm to find the index rank for the given MessageId
 	// the result will be returned into the row variable
 	// if no result found then return an error "message id not found"
@@ -339,7 +345,7 @@ func (idx *StreamIndexFile) searchMessageId(messageId MessageId, lastIndexRank i
 	// assume message id values are always increasing as the index rank increase
 	var err error
 	var lowIndexRank int64 = 0
-	var highIndexRank int64 = lastIndexRank
+	var highIndexRank = lastIndexRank
 	var nextMedianIndexRank int64
 
 	for lowIndexRank < highIndexRank {
@@ -379,7 +385,7 @@ func (idx *StreamIndexFile) searchTimestamp(timestampUnixNano int64, lastIndexRa
 	// assume message id values are always increasing as the index rank increase
 	var err error
 	var lowIndexRank int64 = 0
-	var highIndexRank int64 = lastIndexRank
+	var highIndexRank = lastIndexRank
 	var nextMedianIndexRank int64
 
 	for lowIndexRank < highIndexRank {

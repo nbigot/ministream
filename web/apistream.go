@@ -520,7 +520,7 @@ func (w *WebAPIServer) GetRecords(c *fiber.Ctx) error {
 		return httpError.HTTPResponse(c)
 	}
 
-	var maxRecords uint = w.appConfig.Streams.MaxMessagePerGetOperation
+	var maxRecords = w.appConfig.Streams.MaxMessagePerGetOperation
 	strMaxRecords := c.Query("maxRecords")
 	if strMaxRecords != "" {
 		var maxRecordsRequested uint64

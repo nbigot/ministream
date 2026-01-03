@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/nbigot/ministream/types"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 
 type StreamIndexMySQL struct {
 	streamUUID   uuid.UUID
-	info         *StreamInfo
+	info         *types.StreamInfo
 	logger       *zap.Logger
 	logVerbosity int
 	schemaName   string // name of the SQL schema holding the catalog of streams
@@ -25,8 +25,8 @@ type StreamIndexMySQL struct {
 
 type StreamIndexStats struct {
 	CptMessages       int64
-	FirstMsgId        MessageId
-	LastMsgId         MessageId
+	FirstMsgId        types.MessageId
+	LastMsgId         types.MessageId
 	FirstMsgTimestamp time.Time
 	LastMsgTimestamp  time.Time
 }
@@ -141,15 +141,15 @@ func (idx *StreamIndexMySQL) GetFullTableName() string {
 	return idx.schemaName + ".stream_" + idx.streamUUID.String()
 }
 
-func (idx *StreamIndexMySQL) GetFirstMessageId() (MessageId, error) {
+func (idx *StreamIndexMySQL) GetFirstMessageId() (types.MessageId, error) {
 	return idx.info.ReadableMessages.FirstMsgId, nil
 }
 
-func (idx *StreamIndexMySQL) GetLastMessageId() (MessageId, error) {
+func (idx *StreamIndexMySQL) GetLastMessageId() (types.MessageId, error) {
 	return idx.info.ReadableMessages.LastMsgId, nil
 }
 
-func (idx *StreamIndexMySQL) GetMessageIdAfterLastMessage() (MessageId, error) {
+func (idx *StreamIndexMySQL) GetMessageIdAfterLastMessage() (types.MessageId, error) {
 	if idx.info.ReadableMessages.CptMessages == 0 {
 		return 0, nil
 	}
@@ -157,7 +157,7 @@ func (idx *StreamIndexMySQL) GetMessageIdAfterLastMessage() (MessageId, error) {
 	return idx.info.ReadableMessages.LastMsgId + 1, nil
 }
 
-func (idx *StreamIndexMySQL) GetMessageId(messageId MessageId) (MessageId, error) {
+func (idx *StreamIndexMySQL) GetMessageId(messageId types.MessageId) (types.MessageId, error) {
 	if messageId > idx.info.ReadableMessages.LastMsgId {
 		return 0, errors.New("message id not found")
 	}
@@ -192,7 +192,7 @@ func (idx *StreamIndexMySQL) GetMessageId(messageId MessageId) (MessageId, error
 	return messageId, nil
 }
 
-func (idx *StreamIndexMySQL) GetMessageIdAfterMessageId(messageId MessageId) (MessageId, error) {
+func (idx *StreamIndexMySQL) GetMessageIdAfterMessageId(messageId types.MessageId) (types.MessageId, error) {
 	if messageId > idx.info.ReadableMessages.LastMsgId {
 		return 0, errors.New("message id not found")
 	}
@@ -201,7 +201,7 @@ func (idx *StreamIndexMySQL) GetMessageIdAfterMessageId(messageId MessageId) (Me
 	fullTableName := idx.GetFullTableName()
 	query := "SELECT `id` FROM " + fullTableName + " WHERE `id` > ? ORDER BY `id` ASC LIMIT 1"
 	row := idx.pool.QueryRow(query, messageId)
-	var nextMessageId MessageId
+	var nextMessageId types.MessageId
 	err := row.Scan(&nextMessageId)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -223,12 +223,12 @@ func (idx *StreamIndexMySQL) GetMessageIdAfterMessageId(messageId MessageId) (Me
 	return nextMessageId, nil
 }
 
-func (idx *StreamIndexMySQL) GetMessageIdAtTimestamp(timestamp *time.Time) (MessageId, error) {
+func (idx *StreamIndexMySQL) GetMessageIdAtTimestamp(timestamp *time.Time) (types.MessageId, error) {
 	// find the message id after the given timestamp
 	fullTableName := idx.GetFullTableName()
 	query := "SELECT `id` FROM " + fullTableName + " WHERE `timestamp` >= ? ORDER BY `id` ASC LIMIT 1"
 	row := idx.pool.QueryRow(query, timestamp)
-	var nextMessageId MessageId
+	var nextMessageId types.MessageId
 	err := row.Scan(&nextMessageId)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -258,7 +258,7 @@ func (idx *StreamIndexMySQL) Log() {
 	)
 }
 
-func NewStreamIndex(streamUUID uuid.UUID, info *StreamInfo, schemaName string, tableName string, pool *sql.DB, logger *zap.Logger) *StreamIndexMySQL {
+func NewStreamIndex(streamUUID uuid.UUID, info *types.StreamInfo, schemaName string, tableName string, pool *sql.DB, logger *zap.Logger) *StreamIndexMySQL {
 	return &StreamIndexMySQL{
 		streamUUID:   streamUUID,
 		info:         info,

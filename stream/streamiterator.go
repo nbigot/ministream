@@ -9,7 +9,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/types"
-	. "github.com/nbigot/ministream/types"
 	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/goccy/go-json"
@@ -19,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type StreamIteratorMap = map[StreamIteratorUUID]*StreamIterator
+type StreamIteratorMap = map[types.StreamIteratorUUID]*StreamIterator
 
 // statistics of an iterator
 type StreamIteratorStats struct {
@@ -32,13 +31,13 @@ type StreamIteratorStats struct {
 }
 
 type StreamIterator struct {
-	streamUUID         StreamUUID
-	itUUID             StreamIteratorUUID
-	request            *StreamIteratorRequest
+	streamUUID         types.StreamUUID
+	itUUID             types.StreamIteratorUUID
+	request            *types.StreamIteratorRequest
 	jqFilter           *gojq.Query
-	LastRecordIdRead   MessageId
+	LastRecordIdRead   types.MessageId
 	Stats              StreamIteratorStats
-	handler            IStreamIteratorHandler
+	handler            types.IStreamIteratorHandler
 	getRecordsBusyFlag atomic.Bool
 	logger             *zap.Logger
 	// TODO: add timeout (self delete at timeout)
@@ -46,7 +45,7 @@ type StreamIterator struct {
 
 var rs = jsonschema.Schema{}
 
-func (it *StreamIterator) GetUUID() StreamIteratorUUID {
+func (it *StreamIterator) GetUUID() types.StreamIteratorUUID {
 	return it.itUUID
 }
 
@@ -240,7 +239,7 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 	return &response, nil
 }
 
-func NewStreamIterator(streamUUID StreamUUID, iteratorUUID StreamIteratorUUID, r *StreamIteratorRequest, handler IStreamIteratorHandler, logger *zap.Logger) (*StreamIterator, error) {
+func NewStreamIterator(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, r *types.StreamIteratorRequest, handler types.IStreamIteratorHandler, logger *zap.Logger) (*StreamIterator, error) {
 	var jqFilter *gojq.Query = nil
 	if r.JqFilter != "" {
 		var errJq error

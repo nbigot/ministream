@@ -29,16 +29,10 @@ func main() {
 	}
 
 	salt := *pSalt
-	randomSalt := false
-	if *pSalt == "" {
-		randomSalt = true
-	}
+	randomSalt := *pSalt == ""
 
 	password := *pPassword
-	randomPassword := false
-	if *pPassword == "" {
-		randomPassword = true
-	}
+	randomPassword := *pPassword == ""
 
 	if *count <= 0 {
 		panic("count must be a positive integer")

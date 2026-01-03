@@ -197,7 +197,7 @@ func (s *MySQLStorage) GetDSN() string {
 }
 
 func (s *MySQLStorage) getStreamTableName(streamUUID types.StreamUUID) string {
-	return s.mysqlConfig.StreamTablePrefix + strings.Replace(streamUUID.String(), "-", "_", -1)
+	return s.mysqlConfig.StreamTablePrefix + strings.ReplaceAll(streamUUID.String(), "-", "_")
 }
 
 func (s *MySQLStorage) GetStreamIndex(streamUUID types.StreamUUID) (*StreamIndexMySQL, error) {

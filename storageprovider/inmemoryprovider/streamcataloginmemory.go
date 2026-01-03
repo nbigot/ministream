@@ -78,7 +78,7 @@ func (s *StreamCatalogInMemory) OnDeleteStream(streamUUID types.StreamUUID) erro
 
 func (s *StreamCatalogInMemory) GetStreamsUUIDs() types.StreamUUIDList {
 	s.mu.Lock()
-	var streamsUUIDs types.StreamUUIDList = make(types.StreamUUIDList, 0)
+	var streamsUUIDs = make(types.StreamUUIDList, 0)
 	for streamUUID := range s.streams {
 		streamsUUIDs = append(streamsUUIDs, streamUUID)
 	}

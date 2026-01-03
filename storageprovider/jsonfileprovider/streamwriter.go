@@ -48,14 +48,18 @@ func (w *StreamWriterFile) Init() error {
 	if fileData, err1 := os.OpenFile(w.fileDataPath, os.O_RDONLY|os.O_CREATE, 0644); err1 != nil {
 		return err1
 	} else {
-		defer fileData.Close()
+		defer func() {
+			_ = fileData.Close()
+		}()
 	}
 
 	// ensure file fileIndexPath exists
 	if fileIndex, err2 := os.OpenFile(w.fileIndexPath, os.O_RDONLY|os.O_CREATE, 0644); err2 != nil {
 		return err2
 	} else {
-		defer fileIndex.Close()
+		defer func() {
+			_ = fileIndex.Close()
+		}()
 	}
 
 	// If stream meta file does not exists then create it for the first time
@@ -256,7 +260,9 @@ func (w *StreamWriterFile) SaveFileMetaInfo() error {
 		)
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	// serialize message into string
 	bytes, err := json.Marshal(w.info)

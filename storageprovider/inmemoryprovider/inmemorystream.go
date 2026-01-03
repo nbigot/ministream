@@ -109,7 +109,7 @@ func (s *InMemoryStream) searchRecordIndexByRecordId(messageId types.MessageId, 
 	// assume every message has a unique id
 	// assume message id values are always increasing as the index rank increase
 	var lowIndexRank uint64 = 0
-	var highIndexRank uint64 = lastIndexRank
+	var highIndexRank = lastIndexRank
 	var nextMedianIndexRank uint64
 	var record *InMemoryRecord
 
@@ -147,7 +147,7 @@ func (s *InMemoryStream) searchRecordIndexAtOrAfterTimestamp(timestampUnixNano i
 	// assume every message has a unique id
 	// assume message id values are always increasing as the index rank increase
 	var lowIndexRank uint64 = 0
-	var highIndexRank uint64 = lastIndexRank
+	var highIndexRank = lastIndexRank
 	var nextMedianIndexRank uint64
 	var recordTimestampUnixNano int64
 	var record *InMemoryRecord

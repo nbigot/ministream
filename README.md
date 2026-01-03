@@ -101,6 +101,13 @@ $ MINISTREAM_VERSION="${TAG_VERSION-$(git describe --tags --abbrev=0)}"
 $ go build -ldflags="-X 'main.Version=${MINISTREAM_VERSION}'" cmd/ministream/ministream.go
 ```
 
+#### Linter
+
+To run the linter, use:
+
+```sh
+$ golangci-lint run
+```
 
 #### Configure
 

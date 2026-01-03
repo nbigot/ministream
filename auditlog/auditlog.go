@@ -6,7 +6,7 @@ import (
 
 	"github.com/nbigot/ministream/constants"
 	"github.com/nbigot/ministream/log"
-	. "github.com/nbigot/ministream/web/apierror"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -83,7 +83,7 @@ func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error, auditLogEnabled bool) err
 	}
 
 	if err != nil {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "rbac error",
 			Details:  err.Error(),
 			Code:     constants.ErrorRBACInvalidRule,
@@ -92,7 +92,7 @@ func RBACHandlerLogAccessDeny(c *fiber.Ctx, err error, auditLogEnabled bool) err
 		}
 		return httpError.HTTPResponse(c)
 	} else {
-		httpError := APIError{
+		httpError := apierror.APIError{
 			Message:  "rbac action forbidden",
 			Details:  action,
 			Code:     constants.ErrorRBACForbidden,
