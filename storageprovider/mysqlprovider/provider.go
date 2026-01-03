@@ -136,7 +136,7 @@ func (s *MySQLStorage) OnCreateStream(info *types.StreamInfo) error {
 		return err
 	}
 
-	// instanciate the index
+	// instantiate the index
 	s.SetStreamIndex(info.UUID, NewStreamIndex(info.UUID, info, s.mysqlConfig.SchemaName, s.getStreamTableName(info.UUID), s.pool, s.logger))
 
 	return nil
@@ -149,7 +149,7 @@ func (s *MySQLStorage) LoadStreamsFromUUIDs(streamUUIDs types.StreamUUIDList) (t
 			return nil, err
 		} else {
 			infos[idx] = info
-			// instanciate the index
+			// instantiate the index
 			s.SetStreamIndex(streamUUID, NewStreamIndex(streamUUID, info, s.mysqlConfig.SchemaName, s.getStreamTableName(streamUUID), s.pool, s.logger))
 		}
 	}
@@ -197,7 +197,7 @@ func (s *MySQLStorage) GetDSN() string {
 }
 
 func (s *MySQLStorage) getStreamTableName(streamUUID types.StreamUUID) string {
-	return s.mysqlConfig.StreamTablePrefix + strings.Replace(streamUUID.String(), "-", "_", -1)
+	return s.mysqlConfig.StreamTablePrefix + strings.ReplaceAll(streamUUID.String(), "-", "_")
 }
 
 func (s *MySQLStorage) GetStreamIndex(streamUUID types.StreamUUID) (*StreamIndexMySQL, error) {

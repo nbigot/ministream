@@ -74,11 +74,11 @@ func (w *StreamWriterMySQL) Write(records *[]types.DeferedStreamRecord) error {
 	}
 
 	var accumulatedSizeInBytes types.Size64 = 0
-	var firstMsgTimestamp time.Time = w.info.ReadableMessages.FirstMsgTimestamp
-	var lastMsgTimestamp time.Time = w.info.ReadableMessages.LastMsgTimestamp
+	var firstMsgTimestamp = w.info.ReadableMessages.FirstMsgTimestamp
+	var lastMsgTimestamp = w.info.ReadableMessages.LastMsgTimestamp
 	var lastMsgId types.MessageId
 	var insertedRecords types.Size64 = 0
-	var cptReadableRecords types.Size64 = w.info.ReadableMessages.CptMessages
+	var cptReadableRecords = w.info.ReadableMessages.CptMessages
 
 	for _, record := range *records {
 		if w.logVerbosity > 1 {

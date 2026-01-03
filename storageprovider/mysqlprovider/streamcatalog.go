@@ -179,7 +179,7 @@ func (s *StreamCatalogMySQL) SaveStreamCatalog() error {
 
 func (s *StreamCatalogMySQL) GetStreamsUUIDs() types.StreamUUIDList {
 	s.mu.Lock()
-	var streamsUUIDs types.StreamUUIDList = make(types.StreamUUIDList, 0)
+	var streamsUUIDs = make(types.StreamUUIDList, 0)
 	for streamUUID := range s.streams {
 		streamsUUIDs = append(streamsUUIDs, streamUUID)
 	}
@@ -225,13 +225,15 @@ func (s *StreamCatalogMySQL) LoadStreamCatalog() (types.StreamUUIDList, error) {
 		)
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	// empty the streams list
 	s.streams = make(types.StreamInfoDict)
 
 	// read the rows of the SQL table into the catalog of streams
-	var streamsUUIDs types.StreamUUIDList = make(types.StreamUUIDList, 0)
+	var streamsUUIDs = make(types.StreamUUIDList, 0)
 	var strProperties string
 	var firstMsgId sql.NullInt64
 	var lastMsgId sql.NullInt64
@@ -463,7 +465,7 @@ func (s *StreamCatalogMySQL) GetStreamInfo(streamUUID types.StreamUUID) (*types.
 }
 
 func (s *StreamCatalogMySQL) GetSQLStreamTable(streamUUID types.StreamUUID) string {
-	streamTableName := s.streamTablePrefix + strings.Replace(streamUUID.String(), "-", "_", -1)
+	streamTableName := s.streamTablePrefix + strings.ReplaceAll(streamUUID.String(), "-", "_")
 	return streamTableName
 }
 

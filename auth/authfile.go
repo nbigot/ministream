@@ -39,7 +39,9 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 	if err != nil {
 		return fmt.Errorf("can't open credential file: %s", filename)
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	jsonDecoder := json.NewDecoder(file)
 	strCreds := map[string]string{}

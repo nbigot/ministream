@@ -63,7 +63,7 @@ func makeABAC(jqAbac string) (*ABAC, error) {
 
 	jq, err := gojq.Parse(jqAbac)
 	if err != nil {
-		return nil, fmt.Errorf("Can't create ABAC: %s", err.Error())
+		return nil, fmt.Errorf("can't create ABAC: %s", err.Error())
 	}
 
 	abac := ABAC{
@@ -104,7 +104,7 @@ func (r *RBAC) GetRoles(roleNames *[]string) ([]*Role, error) {
 		if role, foundRole := r.Roles[roleName]; foundRole {
 			roles = append(roles, role)
 		} else {
-			return roles, fmt.Errorf("Unknown role %s", roleName)
+			return roles, fmt.Errorf("unknown role %s", roleName)
 		}
 	}
 	return roles, nil
@@ -189,7 +189,9 @@ func NewRBAC(logger *zap.Logger, filename string) (*RBAC, error) {
 		)
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	srbac := RBACSerializeStruct{}
 	jsonDecoder := json.NewDecoder(file)

@@ -36,7 +36,7 @@ func (h *StreamIteratorHandlerFile) Open() error {
 	}
 
 	if h.file != nil {
-		h.file.Close()
+		_ = h.file.Close()
 	}
 
 	var err error
@@ -50,12 +50,12 @@ func (h *StreamIteratorHandlerFile) Open() error {
 
 func (h *StreamIteratorHandlerFile) Close() error {
 	if h.file != nil {
-		h.file.Close()
+		_ = h.file.Close()
 		h.file = nil
 	}
 
 	if h.index != nil {
-		h.index.Close()
+		_ = h.index.Close()
 		h.index = nil
 	}
 

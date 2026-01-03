@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/nbigot/ministream/buffering"
-	. "github.com/nbigot/ministream/types"
+	"github.com/nbigot/ministream/types"
 
 	"github.com/dustin/go-humanize"
 	"github.com/itchyny/gojq"
@@ -21,7 +21,7 @@ const STREAM_STATE_RUNNING = 2
 const STREAM_STATE_STOPPING = 3
 
 type Stream struct {
-	info         *StreamInfo
+	info         *types.StreamInfo
 	logger       *zap.Logger
 	logVerbosity int
 	iterators    StreamIteratorMap
@@ -118,7 +118,7 @@ func (s *Stream) CloseIterators() error {
 	return nil
 }
 
-func (s *Stream) CloseIterator(iterUUID StreamIteratorUUID) error {
+func (s *Stream) CloseIterator(iterUUID types.StreamIteratorUUID) error {
 	var it *StreamIterator
 	var found bool
 	if it, found = s.iterators[iterUUID]; !found {
@@ -145,7 +145,7 @@ func (s *Stream) CloseIterator(iterUUID StreamIteratorUUID) error {
 	return nil
 }
 
-func (s *Stream) GetIterator(iterUUID StreamIteratorUUID) (*StreamIterator, error) {
+func (s *Stream) GetIterator(iterUUID types.StreamIteratorUUID) (*StreamIterator, error) {
 	if it, found := s.iterators[iterUUID]; !found {
 		return nil, fmt.Errorf("iterator not found: %s", iterUUID.String())
 	} else {
@@ -153,7 +153,7 @@ func (s *Stream) GetIterator(iterUUID StreamIteratorUUID) (*StreamIterator, erro
 	}
 }
 
-func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID StreamIteratorUUID, maxRecords uint) (*GetStreamRecordsResponse, error) {
+func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID types.StreamIteratorUUID, maxRecords uint) (*GetStreamRecordsResponse, error) {
 	if s.state != STREAM_STATE_RUNNING {
 		return nil, errors.New("stream state is not running")
 	}
@@ -166,7 +166,7 @@ func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID StreamIteratorUUID,
 	}
 }
 
-func (s *Stream) PutMessage(c *fasthttp.RequestCtx, message map[string]interface{}) (MessageId, error) {
+func (s *Stream) PutMessage(c *fasthttp.RequestCtx, message map[string]interface{}) (types.MessageId, error) {
 	if s.state != STREAM_STATE_RUNNING {
 		return 0, errors.New("stream state is not running")
 	}
@@ -188,7 +188,7 @@ func (s *Stream) PutMessage(c *fasthttp.RequestCtx, message map[string]interface
 	return msgId, nil
 }
 
-func (s *Stream) PutMessages(c *fasthttp.RequestCtx, records []interface{}) ([]MessageId, error) {
+func (s *Stream) PutMessages(c *fasthttp.RequestCtx, records []interface{}) ([]types.MessageId, error) {
 	if s.state != STREAM_STATE_RUNNING {
 		return nil, errors.New("stream state is not running")
 	}
@@ -196,7 +196,7 @@ func (s *Stream) PutMessages(c *fasthttp.RequestCtx, records []interface{}) ([]M
 	if cptRecords == 0 {
 		return nil, errors.New("no records to ingest")
 	}
-	msgIds := make([]MessageId, cptRecords)
+	msgIds := make([]types.MessageId, cptRecords)
 	s.muIncMsgId.Lock()
 	now := time.Now()
 	if s.info.IngestedMessages.CptMessages == 0 {
@@ -242,8 +242,8 @@ func (s *Stream) Run() {
 	var (
 		timer           *time.Timer
 		flushC          <-chan time.Time
-		immediateExecCh chan DeferedStreamRecord
-		deferedExecCh   chan DeferedStreamRecord
+		immediateExecCh chan types.DeferedStreamRecord
+		deferedExecCh   chan types.DeferedStreamRecord
 		err             error
 	)
 
@@ -328,7 +328,7 @@ func (s *Stream) Run() {
 	}
 }
 
-func (s *Stream) bufferizeMessage(msg DeferedStreamRecord, immediateSave bool) {
+func (s *Stream) bufferizeMessage(msg types.DeferedStreamRecord, immediateSave bool) {
 	if s.logVerbosity > 1 {
 		s.logger.Debug(
 			"bufferizeMessage",
@@ -378,21 +378,21 @@ func (s *Stream) Log() {
 	)
 }
 
-func (s *Stream) UpdateProperties(properties *StreamProperties) {
+func (s *Stream) UpdateProperties(properties *types.StreamProperties) {
 	if s.logVerbosity > 0 {
 		s.logger.Debug("UpdateProperties")
 	}
 	s.info.UpdateProperties(properties)
 }
 
-func (s *Stream) SetProperties(properties *StreamProperties) {
+func (s *Stream) SetProperties(properties *types.StreamProperties) {
 	if s.logVerbosity > 0 {
 		s.logger.Debug("SetProperties")
 	}
 	s.info.SetProperties(properties)
 }
 
-func (s *Stream) GetProperties() *StreamProperties {
+func (s *Stream) GetProperties() *types.StreamProperties {
 	return &s.info.Properties
 }
 
@@ -411,11 +411,11 @@ func (s *Stream) MatchFilterProperties(jqFilter *gojq.Query) (bool, error) {
 	return result, err
 }
 
-func (s *Stream) GetInfo() *StreamInfo {
+func (s *Stream) GetInfo() *types.StreamInfo {
 	return s.info
 }
 
-func (s *Stream) GetUUID() StreamUUID {
+func (s *Stream) GetUUID() types.StreamUUID {
 	return s.info.UUID
 }
 
@@ -423,7 +423,7 @@ func (s *Stream) GetIteratorsCount() int {
 	return len(s.iterators)
 }
 
-func NewStream(info *StreamInfo, ingestBuffer *buffering.StreamIngestBuffer, logger *zap.Logger, logVerbosity int) *Stream {
+func NewStream(info *types.StreamInfo, ingestBuffer *buffering.StreamIngestBuffer, logger *zap.Logger, logVerbosity int) *Stream {
 	return &Stream{
 		info:         info,
 		iterators:    make(StreamIteratorMap),

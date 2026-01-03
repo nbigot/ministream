@@ -1,4 +1,4 @@
-FROM golang:1.20 AS build
+FROM golang:1.24 AS build
 ARG MINISTREAM_VERSION=v1.0.0
 WORKDIR /go/src
 COPY . .

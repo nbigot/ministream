@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/nbigot/ministream/constants"
-	. "github.com/nbigot/ministream/web/apierror"
+	"github.com/nbigot/ministream/web/apierror"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -66,7 +66,7 @@ func MakeRBACHandlerConfig(enableRBAC bool, action string, abacGetPropertiesHand
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = func(c *fiber.Ctx, err error) error {
 			if err != nil {
-				httpError := APIError{
+				httpError := apierror.APIError{
 					Message:  "rbac error",
 					Details:  err.Error(),
 					Code:     cfg.ErrorRBACInvalidRule,
@@ -75,12 +75,12 @@ func MakeRBACHandlerConfig(enableRBAC bool, action string, abacGetPropertiesHand
 				}
 				return httpError.HTTPResponse(c)
 			} else {
-				vErr := ValidationError{FailedField: "action", Tag: "action", Value: cfg.Action}
-				httpError := APIError{
+				vErr := apierror.ValidationError{FailedField: "action", Tag: "action", Value: cfg.Action}
+				httpError := apierror.APIError{
 					Message:          "rbac action forbidden",
 					Code:             cfg.ErrorRBACForbidden,
 					HttpCode:         fiber.StatusForbidden,
-					ValidationErrors: []*ValidationError{&vErr},
+					ValidationErrors: []*apierror.ValidationError{&vErr},
 				}
 				return httpError.HTTPResponse(c)
 			}
