@@ -1,6 +1,7 @@
 package service
 
 import (
+	"os"
 	"testing"
 
 	"github.com/nbigot/ministream/config"
@@ -11,6 +12,13 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 )
+
+func TestMain(m *testing.M) {
+	if err := registry.SetupStorageProviders(); err != nil {
+		panic("error while setup storage providers:" + err.Error())
+	}
+	os.Exit(m.Run())
+}
 
 func initConfig() *config.Config {
 
@@ -34,10 +42,6 @@ storage:
 }
 
 func BenchmarkSetStreamMap(b *testing.B) {
-	if err := registry.SetupStorageProviders(); err != nil {
-		panic("error while setup storage providers:" + err.Error())
-	}
-
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {
 		panic("error while creating service:" + err.Error())
@@ -59,13 +63,9 @@ func BenchmarkSetStreamMap(b *testing.B) {
 }
 
 func TestGetStream(t *testing.T) {
-	if err := registry.SetupStorageProviders(); err != nil {
-		t.Fatalf("error while setup storage providers:" + err.Error())
-	}
-
 	svc, err := NewStreamService(nil, initConfig())
 	if err != nil {
-		t.Fatalf("error while creating service:" + err.Error())
+		t.Fatalf("error while creating service: %v", err)
 	}
 
 	streamId := uuid.New()

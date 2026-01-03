@@ -94,6 +94,13 @@ $ cd ministream
 $ go build cmd/ministream/ministream.go
 ```
 
+Or to set the version variable at build time:
+
+```sh
+$ MINISTREAM_VERSION="${TAG_VERSION-$(git describe --tags --abbrev=0)}"
+$ go build -ldflags="-X 'main.Version=${MINISTREAM_VERSION}'" cmd/ministream/ministream.go
+```
+
 
 #### Configure
 
