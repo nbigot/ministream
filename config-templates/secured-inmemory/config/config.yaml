@@ -1,10 +1,10 @@
 # Minimal configuration file for ministream server
 auth:
-    enable: false
+    enable: true
     method: "FILE"
     methods:
         file:
-            #filename: "/app/data/secrets/secrets.json"
+            filename: "config-templates/secured-inmemory/data/secrets/secrets.json"
         http:
             url: "https://127.0.0.1:8080/account/{accountid}/secrets"
             cacheDurationInSec: 900
@@ -16,8 +16,8 @@ account:
     #id: "00000000-0000-0000-0000-000000000000"
     secretAPIKey: ""
 rbac:
-    enable: false
-    #filename: "/app/data/secrets/rbac.json"
+    enable: true
+    filename: "config-templates/secured-inmemory/data/secrets/rbac.json"
 auditlog:
     enable: false
     enableLogAccessGranted: false
@@ -87,7 +87,7 @@ webserver:
             maxRequests: 10
             durationInSeconds: 60
     jwt:
-        enable: false
+        enable: true
         secretKey: ""
         tokenExpireInMinutes: 60
         iss: "ministream"
@@ -100,10 +100,10 @@ webserver:
     https:
         enable: false
         address: "127.0.0.1:443"
-        #certFile: "/app/certs/cert.pem"
-        #keyFile: "/app/certs/key.pem"
+        certFile: "/app/certs/cert.pem"
+        keyFile: "/app/certs/key.pem"
     swagger:
-        enable: true
+        enable: false
 logger:
     level: "info"
     development: false

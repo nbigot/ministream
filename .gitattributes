@@ -10,3 +10,10 @@
 *.toml text eol=lf
 *.json text eol=lf
 *.xml text eol=lf
+
+# Mark example configurations as documentation to prevent false-positive security warnings
+# These are intentionally public example credentials and certificates
+config-templates/** linguist-documentation
+config-templates/**/secrets/** linguist-documentation
+config-templates/**/*.pem linguist-documentation
+config-templates/**/certs/** linguist-documentation
