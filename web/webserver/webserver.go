@@ -164,6 +164,11 @@ func (s *Server) HandleSignals() error {
 				return fmt.Errorf("received signal hang up: %w", ErrRequestRestart)
 			case syscall.SIGTERM:
 				// stop server due to a signal SIGTERM
+				s.logger.Info("Received SIGTERM, shutting down server...", zap.String("topic", "server"), zap.String("method", "HandleSignals"))
+				return nil
+			case syscall.SIGINT:
+				// handle Ctrl+C (SIGINT)
+				s.logger.Info("Received SIGINT (Ctrl+C), shutting down server...", zap.String("topic", "server"), zap.String("method", "HandleSignals"))
 				return nil
 			}
 		case err := <-s.errsChan:
