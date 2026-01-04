@@ -122,6 +122,12 @@ Pay attention to the directory paths in the config file.
 $ ministream -config config-templates/docker/config/config.yaml
 ```
 
+or run 
+
+```sh
+$ go run cmd/ministream/ministream.go -config config-templates/minimal-inmemory/config.yaml
+```
+
 
 ## Ministream quick tips
 
