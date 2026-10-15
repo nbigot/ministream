@@ -72,6 +72,11 @@ func (w *StreamWriterMySQL) Write(records *[]types.DeferedStreamRecord) error {
 		)
 		return err
 	}
+	// rollback the transaction if it is not committed (no effect after a commit):
+	// a transaction left open would keep its locks on the stream table and its connection
+	defer func() {
+		_ = transaction.Rollback()
+	}()
 
 	var accumulatedSizeInBytes types.Size64 = 0
 	var firstMsgTimestamp = w.info.ReadableMessages.FirstMsgTimestamp
@@ -121,8 +126,6 @@ func (w *StreamWriterMySQL) Write(records *[]types.DeferedStreamRecord) error {
 				zap.Any("msg", record),
 				zap.Error(err),
 			)
-			// rollback the transaction
-			_ = transaction.Rollback()
 			return err
 		}
 
@@ -152,8 +155,6 @@ func (w *StreamWriterMySQL) Write(records *[]types.DeferedStreamRecord) error {
 			zap.String("stream.uuid", w.info.UUID.String()),
 			zap.Error(err),
 		)
-		// rollback the transaction
-		_ = transaction.Rollback()
 		return err
 	}
 
@@ -196,6 +197,9 @@ func (w *StreamWriterMySQL) SaveMetaInfo(transaction *sql.Tx, cptMessages types.
 	}
 
 	// implement SQL update
+	// (the dates are given as time.Time values converted by the driver: MySQL rejects
+	// the RFC3339 format of a date in UTC, suffix "Z", which is the location of the
+	// dates loaded from the catalog after a restart)
 	query := "UPDATE " + w.schemaName + "." + w.catalogTableName + " SET `cache_cpt_rows`=?, `cache_size_in_bytes`=?, `cache_first_msg_id`=?, `cache_last_msg_id`=?, `cache_first_msg_timestamp`=?, `cache_last_msg_timestamp`=?, `last_update`=NOW() WHERE `id`=?"
 	_, err := transaction.Exec(
 		query,
@@ -203,8 +207,8 @@ func (w *StreamWriterMySQL) SaveMetaInfo(transaction *sql.Tx, cptMessages types.
 		sizeInBytes,
 		firstMsgId,
 		lastMsgId,
-		firstMsgTimestamp.Format(time.RFC3339),
-		lastMsgTimestamp.Format(time.RFC3339),
+		firstMsgTimestamp,
+		lastMsgTimestamp,
 		streamUUID,
 	)
 	if err != nil {

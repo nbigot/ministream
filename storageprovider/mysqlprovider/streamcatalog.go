@@ -334,6 +334,10 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 		)
 		return err
 	}
+	// rollback the transaction if it is not committed (no effect after a commit)
+	defer func() {
+		_ = transaction.Rollback()
+	}()
 
 	// insert new stream into the catalog (in catalog SQL table)
 	query := "INSERT INTO " + s.schemaName + "." + s.catalogTableName + " (id, creation_date, last_update, properties) VALUES (?, ?, ?, ?)"
@@ -350,11 +354,13 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 		)
 		return err
 	}
+	// note: the dates are given as time.Time values (converted by the driver),
+	// MySQL rejects the RFC3339 format of a date in UTC (suffix "Z")
 	_, err = transaction.Exec(
 		query,
 		streamInfo.UUID,
-		streamInfo.CreationDate.Format(time.RFC3339),
-		streamInfo.LastUpdate.Format(time.RFC3339),
+		streamInfo.CreationDate,
+		streamInfo.LastUpdate,
 		propertiesJSON,
 	)
 	if err != nil {
@@ -367,8 +373,6 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 			zap.String("stream.uuid", streamInfo.UUID.String()),
 			zap.Error(err),
 		)
-		// rollback the transaction
-		_ = transaction.Rollback()
 		return err
 	}
 
@@ -386,8 +390,6 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 			zap.String("stream.uuid", streamInfo.UUID.String()),
 			zap.Error(err),
 		)
-		// rollback the transaction
-		_ = transaction.Rollback()
 		return err
 	}
 
@@ -401,8 +403,6 @@ func (s *StreamCatalogMySQL) OnCreateStream(streamInfo *types.StreamInfo) error 
 			zap.String("stream.uuid", streamInfo.UUID.String()),
 			zap.Error(err),
 		)
-		// rollback the transaction
-		_ = transaction.Rollback()
 		return err
 	}
 
