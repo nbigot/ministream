@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/nbigot/ministream/types"
 
@@ -113,11 +112,7 @@ func (h *StreamIteratorHandlerMySQL) GetNextRecord() (types.MessageId, interface
 
 	// the record is returned as generic JSON values like the other storage providers
 	// (jq filters cannot be applied on go structs nor on time.Time values)
-	value := map[string]interface{}{
-		"i": record.Id,
-		"d": record.Msg.CreationDate.Format(time.RFC3339Nano),
-		"m": record.Msg.Msg,
-	}
+	value := types.NewRecordValue(record.Id, record.Msg.CreationDate, record.Msg.Msg)
 
 	// result is: (valid record, record found, may continue, no error)
 	return record.Id, value, true, true, nil

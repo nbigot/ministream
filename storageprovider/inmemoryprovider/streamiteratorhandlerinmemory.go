@@ -3,7 +3,6 @@ package inmemoryprovider
 import (
 	"bufio"
 	"errors"
-	"time"
 
 	"github.com/nbigot/ministream/types"
 
@@ -85,11 +84,7 @@ func (h *StreamIteratorHandlerInMemory) GetNextRecord() (types.MessageId, interf
 	// the result is the id of the record (not its index), and the record as generic
 	// JSON values like the other storage providers (jq filters cannot be applied
 	// on go structs nor on time.Time values)
-	value := map[string]interface{}{
-		"i": record.Id,
-		"d": record.CreationDate.Format(time.RFC3339Nano),
-		"m": record.Msg,
-	}
+	value := types.NewRecordValue(record.Id, record.CreationDate, record.Msg)
 	return record.Id, value, true, mayContinue, nil
 }
 

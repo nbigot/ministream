@@ -96,7 +96,7 @@ func readTestRecords(t *testing.T, s *MySQLStorage, streamUUID types.StreamUUID,
 			return ids
 		}
 		record, ok := value.(map[string]interface{})
-		if !ok || record["i"] != id || record["m"] == nil {
+		if !ok || record["i"] != int(id) || record["m"] == nil {
 			t.Fatalf("unexpected record %d: %#v", id, value)
 		}
 		ids = append(ids, id)
