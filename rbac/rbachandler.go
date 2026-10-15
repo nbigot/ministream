@@ -150,10 +150,12 @@ func CheckRBAC(c *fiber.Ctx, cfg *RBACHandlerConfig, role *Role, rule *Rule, use
 
 	properties, err := cfg.ABACGetPropertiesHandler(c)
 	if err != nil {
-		return true, cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err.Error()))
+		// the resource is unknown (ex: invalid or unknown stream uuid),
+		// therefore this rule cannot grant the action
+		return false, nil
 	} else {
 		if grant, err := CheckABAC(c, properties, rule.Abac); err != nil {
-			return true, cfg.ErrorHandler(c, fmt.Errorf("abac properties not found: %s", err))
+			return true, cfg.ErrorHandler(c, fmt.Errorf("abac error: %s", err))
 		} else if grant {
 			// action authorized for this specific resource
 			c.Locals(cfg.RBACContextKey, map[string]*string{"user": user, "role": &role.Id, "rule": &rule.Id, "action": &cfg.Action, "abac": &rule.Abac.JqDef})
@@ -184,5 +186,6 @@ func CheckABAC(c *fiber.Ctx, properties interface{}, abac *ABAC) (bool, error) {
 		}
 	}
 
-	return true, nil
+	// the jq filter yields no value (ex: "select(...)" not matching): access denied
+	return false, nil
 }
