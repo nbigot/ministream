@@ -30,33 +30,51 @@ func (m *AuthHTTP) GetMethodName() string {
 }
 
 func (m *AuthHTTP) AuthenticateUser(userId string, password string) (bool, error) {
-	if m.cacheDurationInSec > 0 && m.cacheExpiresAt < time.Now().Unix() {
-		if err := m.LoadCredentialsFromHTTP(); err != nil {
-			return false, err
-		}
+	creds, err := m.getCredentials()
+	if err != nil {
+		return false, err
 	}
 
-	if pbkdf2, foundUser := m.creds[userId]; foundUser {
+	if pbkdf2, foundUser := creds[userId]; foundUser {
 		return pbkdf2.Verify(password)
-	} else {
-		return false, fmt.Errorf("user id not found: %s", userId)
 	}
+	// unknown user: wrong credentials (this is not an internal error)
+	return false, nil
+}
+
+// getCredentials returns the credentials, they are loaded at the first authentication
+// then reloaded when the cache has expired (when the cache duration is 0, the credentials
+// are loaded for every authentication).
+func (m *AuthHTTP) getCredentials() (map[string]*Pbkdf2, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.creds == nil || m.cacheDurationInSec <= 0 || time.Now().Unix() >= m.cacheExpiresAt {
+		if err := m.loadCredentialsFromHTTP(); err != nil {
+			return nil, err
+		}
+	}
+	return m.creds, nil
 }
 
 func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	return m.loadCredentialsFromHTTP()
+}
 
+func (m *AuthHTTP) loadCredentialsFromHTTP() error {
 	apiUrl, err := url.Parse(m.url)
 	if err != nil {
 		return err
 	}
 
-	var transport *http.Transport = nil
+	// note: the transport must stay a nil interface when there is no proxy
+	// (a nil *http.Transport in the interface makes client.Do panic)
+	client := &http.Client{Timeout: time.Second * time.Duration(m.timeoutInSec)}
 	if m.proxyUrl != nil {
-		transport = &http.Transport{Proxy: http.ProxyURL(m.proxyUrl)}
+		client.Transport = &http.Transport{Proxy: http.ProxyURL(m.proxyUrl)}
 	}
-	client := &http.Client{Timeout: time.Second * time.Duration(m.timeoutInSec), Transport: transport}
 
 	r, _ := http.NewRequest(http.MethodGet, apiUrl.String(), nil)
 	if m.authToken != "" {
@@ -67,6 +85,9 @@ func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode > 299 {
 		return fmt.Errorf("LoadCredentialsFromHTTP: invalid response code %d", resp.StatusCode)
 	}
@@ -77,14 +98,11 @@ func (m *AuthHTTP) LoadCredentialsFromHTTP() error {
 	if err := jsonDecoder.Decode(&strCreds); err != nil {
 		return err
 	}
-	m.creds = map[string]*Pbkdf2{}
-	for username, pbkdf2Hash := range strCreds {
-		if pbkdf2, err := HashedPasswordToPbkdf2(pbkdf2Hash); err != nil {
-			return err
-		} else {
-			m.creds[username] = pbkdf2
-		}
+	creds, err := credentialsFromHashes(strCreds)
+	if err != nil {
+		return err
 	}
+	m.creds = creds
 
 	if m.cacheDurationInSec > 0 {
 		m.cacheExpiresAt = time.Now().Add(time.Second * time.Duration(m.cacheDurationInSec)).Unix()
@@ -110,6 +128,10 @@ func (m *AuthHTTP) Initialize(logger *zap.Logger, c *config.AuthConfig) error {
 	m.authToken = c.Methods.HTTP.AuthToken
 	m.cacheDurationInSec = c.Methods.HTTP.CacheDurationInSec
 	m.cacheExpiresAt = time.Now().Unix()
+	// forget the credentials of a previous configuration (server restart)
+	m.mu.Lock()
+	m.creds = nil
+	m.mu.Unlock()
 	return nil
 }
 

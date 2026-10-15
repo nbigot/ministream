@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/nbigot/ministream/config"
 	"go.uber.org/zap"
@@ -23,9 +24,27 @@ func (m *AuthFile) GetMethodName() string {
 func (m *AuthFile) AuthenticateUser(userId string, password string) (bool, error) {
 	if pbkdf2, foundUser := m.creds[userId]; foundUser {
 		return pbkdf2.Verify(password)
-	} else {
-		return false, fmt.Errorf("user id not found: %s", userId)
 	}
+	// unknown user: wrong credentials (this is not an internal error)
+	return false, nil
+}
+
+// credentialsFromHashes converts a credentials document (user id -> hashed password)
+// into PBKDF2 hashes. Keys starting with an underscore are comments (ex: "_WARNING")
+// and are ignored.
+func credentialsFromHashes(hashes map[string]string) (map[string]*Pbkdf2, error) {
+	creds := map[string]*Pbkdf2{}
+	for username, pbkdf2Hash := range hashes {
+		if strings.HasPrefix(username, "_") {
+			continue
+		}
+		pbkdf2, err := HashedPasswordToPbkdf2(pbkdf2Hash)
+		if err != nil {
+			return nil, fmt.Errorf("invalid hash for user %s: %w", username, err)
+		}
+		creds[username] = pbkdf2
+	}
+	return creds, nil
 }
 
 func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
@@ -48,14 +67,11 @@ func (m *AuthFile) LoadCredentialsFromFile(filename string) error {
 	if err := jsonDecoder.Decode(&strCreds); err != nil {
 		return err
 	}
-	m.creds = map[string]*Pbkdf2{}
-	for username, pbkdf2Hash := range strCreds {
-		if pbkdf2, err := HashedPasswordToPbkdf2(pbkdf2Hash); err != nil {
-			return err
-		} else {
-			m.creds[username] = pbkdf2
-		}
+	creds, err := credentialsFromHashes(strCreds)
+	if err != nil {
+		return err
 	}
+	m.creds = creds
 	return nil
 }
 
