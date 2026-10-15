@@ -41,6 +41,10 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 		return auditlog.RBACHandlerLogAccessDeny(c, err, w.appConfig.AuditLog.Enable)
 	}
 
+	// ABAC rules of the routes of a stream are evaluated on the stream
+	// ({"streamUUID": "...", "properties": {...}})
+	abacStream := w.GetStreamPropertiesForABAC
+
 	rateLimiterEnable := w.appConfig.WebServer.RateLimiter.Enable
 	rateLimiterMaxRequests := w.appConfig.WebServer.RateLimiter.RouteStream.MaxRequests      // max count of requests
 	rateDurationInSeconds := w.appConfig.WebServer.RateLimiter.RouteStream.DurationInSeconds // expiration time of the limit
@@ -50,19 +54,19 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 	api := app.Group("/api/v1")
 
 	apiStream := api.Group("/stream", JWTProtected(), RateLimiterStreams(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
-	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecords, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecords)
-	apiStream.Put("/:streamuuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecords, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecords)
-	apiStream.Put("/:streamuuid/record", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecord, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecord)
-	apiStream.Post("/:streamuuid/iterator", rbac.RBACProtected(enableRBAC, rbac.ActionCreateRecordsIterator, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CreateRecordsIterator)
-	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/stats", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecordsIteratorStats, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecordsIteratorStats)
-	apiStream.Delete("/:streamuuid/iterator/:streamiteratoruuid", rbac.RBACProtected(enableRBAC, rbac.ActionCloseRecordsIterator, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CloseRecordsIterator)
-	apiStream.Get("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamDescription, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamInformation)
-	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamProperties)
-	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionSetStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.SetStreamProperties)
-	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionUpdateStreamProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.UpdateStreamProperties)
+	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecords, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecords)
+	apiStream.Put("/:streamuuid/records", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecords, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecords)
+	apiStream.Put("/:streamuuid/record", rbac.RBACProtected(enableRBAC, rbac.ActionPutRecord, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.PutRecord)
+	apiStream.Post("/:streamuuid/iterator", rbac.RBACProtected(enableRBAC, rbac.ActionCreateRecordsIterator, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CreateRecordsIterator)
+	apiStream.Get("/:streamuuid/iterator/:streamiteratoruuid/stats", rbac.RBACProtected(enableRBAC, rbac.ActionGetRecordsIteratorStats, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetRecordsIteratorStats)
+	apiStream.Delete("/:streamuuid/iterator/:streamiteratoruuid", rbac.RBACProtected(enableRBAC, rbac.ActionCloseRecordsIterator, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CloseRecordsIterator)
+	apiStream.Get("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamDescription, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamInformation)
+	apiStream.Get("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionGetStreamProperties, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetStreamProperties)
+	apiStream.Post("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionSetStreamProperties, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.SetStreamProperties)
+	apiStream.Patch("/:streamuuid/properties", rbac.RBACProtected(enableRBAC, rbac.ActionUpdateStreamProperties, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.UpdateStreamProperties)
 	apiStream.Post("/", rbac.RBACProtected(enableRBAC, rbac.ActionCreateStream, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.CreateStream)
-	apiStream.Delete("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionDeleteStream, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.DeleteStream)
-	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(enableRBAC, rbac.ActionRebuildIndex, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.RebuildIndex)
+	apiStream.Delete("/:streamuuid", rbac.RBACProtected(enableRBAC, rbac.ActionDeleteStream, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.DeleteStream)
+	apiStream.Post("/:streamuuid/index/rebuild", rbac.RBACProtected(enableRBAC, rbac.ActionRebuildIndex, abacStream, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.RebuildIndex)
 
 	apiStreams := api.Group("/streams", JWTProtected(), RateLimiterStreams(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
 	apiStreams.Get("/", rbac.RBACProtected(enableRBAC, rbac.ActionListStreams, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListStreams)
