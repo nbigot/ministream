@@ -15,7 +15,7 @@ func GetFiberConfig() fiber.Config {
 		UnescapePath:            false,
 		BodyLimit:               10485760,
 		Concurrency:             262144,
-		IdleTimeout:             60000,
+		IdleTimeout:             60 * time.Second,
 		ReadBufferSize:          4096,
 		WriteBufferSize:         4096,
 		CompressedFileSuffix:    ".gz",
