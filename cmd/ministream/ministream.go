@@ -153,12 +153,13 @@ func main() {
 		}
 
 		restartServer, serverErr := RunServer(appConfig)
-		if !restartServer || serverErr != nil {
+		if serverErr != nil {
+			log.Logger.Error("End program", zap.String("topic", "server"), zap.Error(serverErr))
+			os.Exit(1)
+		}
+		if !restartServer {
 			log.Logger.Info("End program", zap.String("topic", "server"))
 			os.Exit(0)
-		}
-		if serverErr != nil {
-			os.Exit(1)
 		}
 	}
 }
