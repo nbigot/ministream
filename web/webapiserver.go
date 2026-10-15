@@ -48,6 +48,9 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 	rateLimiterEnable := w.appConfig.WebServer.RateLimiter.Enable
 	rateLimiterMaxRequests := w.appConfig.WebServer.RateLimiter.RouteStream.MaxRequests      // max count of requests
 	rateDurationInSeconds := w.appConfig.WebServer.RateLimiter.RouteStream.DurationInSeconds // expiration time of the limit
+	// the routes of the users and accounts have their own limits (rateLimiter.routeAccount)
+	rateLimiterAccountMaxRequests := w.appConfig.WebServer.RateLimiter.RouteAccount.MaxRequests
+	rateAccountDurationInSeconds := w.appConfig.WebServer.RateLimiter.RouteAccount.DurationInSeconds
 
 	// Optimization: order of routes registration matters for performance
 	// Please register most used routes first
@@ -72,13 +75,13 @@ func (w *WebAPIServer) AddRoutes(app *fiber.App) {
 	apiStreams.Get("/", rbac.RBACProtected(enableRBAC, rbac.ActionListStreams, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListStreams)
 	apiStreams.Get("/properties", rbac.RBACProtected(enableRBAC, rbac.ActionListStreamsProperties, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListStreamsProperties)
 
-	apiUser := api.Group("/user", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiUser := api.Group("/user", RateLimiterAccounts(rateLimiterEnable, rateLimiterAccountMaxRequests, rateAccountDurationInSeconds))
 	apiUser.Get("/login", w.LoginUser)
 
-	apiUsers := api.Group("/users", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiUsers := api.Group("/users", RateLimiterAccounts(rateLimiterEnable, rateLimiterAccountMaxRequests, rateAccountDurationInSeconds))
 	apiUsers.Get("/", JWTProtected(), rbac.RBACProtected(enableRBAC, rbac.ActionListUsers, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.ListUsers)
 
-	apiAccount := api.Group("/account", RateLimiterAccounts(rateLimiterEnable, rateLimiterMaxRequests, rateDurationInSeconds))
+	apiAccount := api.Group("/account", RateLimiterAccounts(rateLimiterEnable, rateLimiterAccountMaxRequests, rateAccountDurationInSeconds))
 	apiAccount.Get("/validate", w.ValidateApiKey)
 	apiAccount.Get("/login", w.LoginAccount)
 	apiAccount.Get("/", JWTProtected(), rbac.RBACProtected(enableRBAC, rbac.ActionGetAccount, nil, auditlogRBACHandlerLogAccessGranted, auditlogRBACHandlerLogAccessDeny), w.GetAccount)
