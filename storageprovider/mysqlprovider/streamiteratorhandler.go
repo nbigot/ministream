@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/nbigot/ministream/types"
 
@@ -110,8 +111,16 @@ func (h *StreamIteratorHandlerMySQL) GetNextRecord() (types.MessageId, interface
 	h.bufferIndex++
 	h.nextRecordIdRead = record.Id + 1
 
+	// the record is returned as generic JSON values like the other storage providers
+	// (jq filters cannot be applied on go structs nor on time.Time values)
+	value := map[string]interface{}{
+		"i": record.Id,
+		"d": record.Msg.CreationDate.Format(time.RFC3339Nano),
+		"m": record.Msg.Msg,
+	}
+
 	// result is: (valid record, record found, may continue, no error)
-	return record.Id, record.Msg, true, true, nil
+	return record.Id, value, true, true, nil
 }
 
 func (h *StreamIteratorHandlerMySQL) fillBuffer() error {
@@ -120,8 +129,9 @@ func (h *StreamIteratorHandlerMySQL) fillBuffer() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	firstId := h.bufferNextId
 	query := "SELECT `id`, `timestamp`, `message` FROM " + h.schemaName + "." + h.streamTableName + " WHERE `id` >= ? ORDER BY `id` ASC LIMIT ?"
-	rows, err := h.pool.Query(query, h.bufferNextId, h.bufferSize)
+	rows, err := h.pool.Query(query, firstId, h.bufferSize)
 	if err != nil {
 		h.logger.Error(
 			"Error while reading records from the SQL database",
@@ -177,6 +187,21 @@ func (h *StreamIteratorHandlerMySQL) fillBuffer() error {
 
 		h.buffer = append(h.buffer, row)
 		h.bufferNextId = row.Id + 1
+	}
+
+	if err := rows.Err(); err != nil {
+		// the read was interrupted: drop the partial chunk, it will be read again
+		h.buffer = h.buffer[:0]
+		h.bufferNextId = firstId
+		h.logger.Error(
+			"Error while reading records from the SQL database",
+			zap.String("topic", "streamiterator"),
+			zap.String("method", "fillBuffer"),
+			zap.String("schema", h.schemaName),
+			zap.String("table", h.streamTableName),
+			zap.Error(err),
+		)
+		return err
 	}
 
 	return nil
