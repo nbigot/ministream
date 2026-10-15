@@ -3,6 +3,7 @@ package inmemoryprovider
 import (
 	"bufio"
 	"errors"
+	"time"
 
 	"github.com/nbigot/ministream/types"
 
@@ -42,9 +43,15 @@ func (h *StreamIteratorHandlerInMemory) Seek(request *types.StreamIteratorReques
 	case "FIRST_MESSAGE":
 		h.nextReadRecordIndex = 0
 	case "LAST_MESSAGE":
-		h.nextReadRecordIndex = cptRecords
+		// index of the last record (the first record when the stream is empty)
+		if cptRecords > 0 {
+			h.nextReadRecordIndex = cptRecords - 1
+		} else {
+			h.nextReadRecordIndex = 0
+		}
 	case "AFTER_LAST_MESSAGE":
-		h.nextReadRecordIndex = cptRecords + 1
+		// index of the next record that will be added
+		h.nextReadRecordIndex = cptRecords
 	case "AT_MESSAGE_ID":
 		h.nextReadRecordIndex, err = h.inMemoryStream.GetIndexAtMessageId(request.MessageId)
 	case "AFTER_MESSAGE_ID":
@@ -70,12 +77,20 @@ func (h *StreamIteratorHandlerInMemory) SaveSeek() error {
 }
 
 func (h *StreamIteratorHandlerInMemory) GetNextRecord() (types.MessageId, interface{}, bool, bool, error) {
-	recordIndex := h.nextReadRecordIndex
-	record, foundRecord, mayContinue := h.inMemoryStream.GetRecordAtIndex(recordIndex)
-	if foundRecord {
-		h.nextReadRecordIndex++
+	record, foundRecord, mayContinue := h.inMemoryStream.GetRecordAtIndex(h.nextReadRecordIndex)
+	if !foundRecord {
+		return 0, nil, false, mayContinue, nil
 	}
-	return recordIndex, record, foundRecord, mayContinue, nil
+	h.nextReadRecordIndex++
+	// the result is the id of the record (not its index), and the record as generic
+	// JSON values like the other storage providers (jq filters cannot be applied
+	// on go structs nor on time.Time values)
+	value := map[string]interface{}{
+		"i": record.Id,
+		"d": record.CreationDate.Format(time.RFC3339Nano),
+		"m": record.Msg,
+	}
+	return record.Id, value, true, mayContinue, nil
 }
 
 func NewStreamIteratorHandlerInMemory(streamUUID types.StreamUUID, iteratorUUID types.StreamIteratorUUID, inMemoryStream *InMemoryStream, logger *zap.Logger) *StreamIteratorHandlerInMemory {
