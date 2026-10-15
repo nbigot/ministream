@@ -423,7 +423,7 @@ func (s *StreamCatalogMySQL) OnDeleteStream(streamUUID types.StreamUUID) error {
 	query := "DELETE FROM " + s.schemaName + "." + s.catalogTableName + " WHERE id = ?"
 	_, err := s.pool.Exec(query, streamUUID)
 	if err != nil {
-		s.logger.Fatal(
+		s.logger.Error(
 			"Can't delete stream",
 			zap.String("topic", "stream"),
 			zap.String("method", "OnDeleteStream"),
@@ -436,11 +436,13 @@ func (s *StreamCatalogMySQL) OnDeleteStream(streamUUID types.StreamUUID) error {
 	}
 
 	// Remove the stream SQL table
-	streamTableName := s.streamTablePrefix + streamUUID.String()
+	// (same table name as the one created by OnCreateStream: the dashes of the uuid are
+	// replaced by underscores, a table name with dashes is a syntax error)
+	streamTableName := s.GetSQLStreamTable(streamUUID)
 	query = "DROP TABLE " + s.schemaName + "." + streamTableName
 	_, err = s.pool.Exec(query)
 	if err != nil {
-		s.logger.Fatal(
+		s.logger.Error(
 			"Can't drop stream table",
 			zap.String("topic", "stream"),
 			zap.String("method", "OnDeleteStream"),
