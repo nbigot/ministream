@@ -203,12 +203,13 @@ func (svc *Service) GetStreamsUUIDs() types.StreamUUIDList {
 }
 
 func (svc *Service) GetStreamsUUIDsFiltered(jqFilter ...*gojq.Query) types.StreamUUIDList {
-	svc.mapMutex.Lock()
-	defer svc.mapMutex.Unlock()
+	// note: do not call svc.GetStream() here, it would try to lock the
+	// non-reentrant mutex a second time (deadlock)
+	svc.mapMutex.RLock()
+	defer svc.mapMutex.RUnlock()
 
 	uuids := make([]types.StreamUUID, 0, len(svc.Hashmap))
-	for uuid := range svc.Hashmap {
-		s := svc.GetStream(uuid)
+	for uuid, s := range svc.Hashmap {
 		if s != nil {
 			match_filters := true
 			for _, jq := range jqFilter {
