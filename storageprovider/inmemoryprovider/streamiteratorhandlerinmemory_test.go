@@ -46,7 +46,7 @@ func readIds(t *testing.T, s *InMemoryStream, request *types.StreamIteratorReque
 		if !found {
 			return ids
 		}
-		if record.(map[string]interface{})["i"] != id {
+		if record.(map[string]interface{})["i"] != int(id) {
 			t.Fatalf("record %v has not the id %d", record, id)
 		}
 		ids = append(ids, id)
