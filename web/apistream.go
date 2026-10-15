@@ -593,8 +593,8 @@ func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 
 	// check batch id for deduplication
 	batch_id := c.Get("x-ministream-batch-id", "")
+	dedup_id := fmt.Sprintf("%s:%s", streamPtr.GetUUID().String(), batch_id)
 	if batch_id != "" {
-		dedup_id := fmt.Sprintf("%s:%s", streamPtr.GetUUID().String(), batch_id)
 		if w.reqDedupManager.Exists(dedup_id) {
 			httpError := apierror.APIError{
 				Message:    "batch id already processed",
@@ -610,10 +610,12 @@ func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 	}
 
 	if err := c.BodyParser(&payload); err != nil {
+		// the batch was not processed: it can be sent again
+		w.reqDedupManager.Remove(dedup_id)
 		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err.Error(),
-			Code:     constants.ErrorCantCreateStream,
+			Code:     constants.ErrorCantDeserializeJson,
 			HttpCode: fiber.StatusBadRequest,
 			Err:      err,
 		}
@@ -622,6 +624,7 @@ func (w *WebAPIServer) PutRecord(c *fiber.Ctx) error {
 
 	singleMessageId, err2 := streamPtr.PutMessage(c.Context(), payload)
 	if err2 != nil {
+		w.reqDedupManager.Remove(dedup_id)
 		httpError := apierror.APIError{
 			Message:  "invalid json body format",
 			Details:  err2.Error(),
