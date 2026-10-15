@@ -168,7 +168,8 @@ func (m *JWTManager) GenerateJWT(isSuperUser bool, accessKeyId string, secretAcc
 	}
 
 	if !success {
-		return success, "", &claims, user, err
+		// unknown user or wrong password: wrong credentials (this is not an internal error)
+		return false, "", &claims, user, nil
 	}
 
 	t, err := token.SignedString([]byte(m.config.SecretKey))

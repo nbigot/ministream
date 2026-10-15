@@ -66,7 +66,7 @@ func (w *WebAPIServer) LoginUser(c *fiber.Ctx) error {
 		httpError := apierror.APIError{
 			Message:  "bad Request",
 			Details:  "RBAC is not enabled on server",
-			Code:     constants.ErrorJWTNotEnabled,
+			Code:     constants.ErrorRBACNotEnabled,
 			HttpCode: fiber.StatusBadRequest,
 		}
 		return httpError.HTTPResponse(c)
