@@ -104,8 +104,14 @@ func (idx *StreamIndexMySQL) GetStats() (*StreamIndexStats, error) {
 		return nil, err
 	}
 
+	if stats.CptMessages == 0 {
+		// empty stream: there is no first nor last message
+		return &stats, nil
+	}
+
 	// get first message id and timestamp
-	query = "SELECT `id`, `creation_date` FROM " + fullTableName + " ORDER BY `id` ASC LIMIT 1"
+	// (note: the column of the stream table is `timestamp`, there is no `creation_date` column)
+	query = "SELECT `id`, `timestamp` FROM " + fullTableName + " ORDER BY `id` ASC LIMIT 1"
 	row = idx.pool.QueryRow(query)
 	err = row.Scan(&stats.FirstMsgId, &stats.FirstMsgTimestamp)
 	if err != nil {
@@ -120,7 +126,7 @@ func (idx *StreamIndexMySQL) GetStats() (*StreamIndexStats, error) {
 	}
 
 	// get last message id and timestamp
-	query = "SELECT `id`, `creation_date` FROM " + fullTableName + " ORDER BY `id` DESC LIMIT 1"
+	query = "SELECT `id`, `timestamp` FROM " + fullTableName + " ORDER BY `id` DESC LIMIT 1"
 	row = idx.pool.QueryRow(query)
 	err = row.Scan(&stats.LastMsgId, &stats.LastMsgTimestamp)
 	if err != nil {
@@ -138,7 +144,8 @@ func (idx *StreamIndexMySQL) GetStats() (*StreamIndexStats, error) {
 }
 
 func (idx *StreamIndexMySQL) GetFullTableName() string {
-	return idx.schemaName + ".stream_" + idx.streamUUID.String()
+	// the table name is computed by the storage provider (configured prefix + uuid with underscores)
+	return idx.schemaName + "." + idx.tableName
 }
 
 func (idx *StreamIndexMySQL) GetFirstMessageId() (types.MessageId, error) {

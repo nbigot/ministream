@@ -71,3 +71,20 @@ func TestMySQLStorage_getStreamTableName(t *testing.T) {
 		}
 	})
 }
+
+func TestStreamTableNamesAreConsistent(t *testing.T) {
+	// the index and the catalog must use the table created for the stream
+	streamUUID := uuid.MustParse("9cf1eba6-0f6d-425e-ada9-e5b6cf293ffc")
+	mysqlStorage := &MySQLStorage{mysqlConfig: &MySQLConfig{SchemaName: "ministream", StreamTablePrefix: "prefix_"}}
+	tableName := mysqlStorage.getStreamTableName(streamUUID)
+
+	idx := NewStreamIndex(streamUUID, nil, "ministream", tableName, nil, nil)
+	if idx.GetFullTableName() != "ministream."+tableName {
+		t.Errorf("index table: expected %q, got %q", "ministream."+tableName, idx.GetFullTableName())
+	}
+
+	catalog := NewStreamCatalogMySQL(nil, nil, "ministream", "streams", "prefix_")
+	if catalog.GetSQLStreamTable(streamUUID) != tableName {
+		t.Errorf("catalog table: expected %q, got %q", tableName, catalog.GetSQLStreamTable(streamUUID))
+	}
+}
