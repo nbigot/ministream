@@ -3,6 +3,7 @@ package stream
 import (
 	"context"
 	"errors"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -45,6 +46,10 @@ type StreamIterator struct {
 }
 
 var rs = jsonschema.Schema{}
+
+// rsMu serializes the validations: the jsonschema package is not thread safe, a validation
+// updates the schema and global maps (concurrent validations crashed the server).
+var rsMu sync.Mutex
 
 func (it *StreamIterator) GetUUID() types.StreamIteratorUUID {
 	return it.itUUID
@@ -281,7 +286,9 @@ func NewStreamIterator(streamUUID types.StreamUUID, iteratorUUID types.StreamIte
 }
 
 func ValidateStreamIteratorRequest(ctx context.Context, data []byte) error {
+	rsMu.Lock()
 	errs, err := rs.ValidateBytes(ctx, data)
+	rsMu.Unlock()
 	if err != nil {
 		return err
 	}
