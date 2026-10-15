@@ -26,6 +26,7 @@ type StreamIteratorHandlerFile struct {
 	nextRecordIdRead types.MessageId
 	index            *StreamIndexFile
 	reader           *bufio.Reader
+	pendingLine      string // beginning of a line being written (read before its end)
 	logger           *zap.Logger
 }
 
@@ -122,6 +123,9 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (types.MessageId, interface{
 		}
 
 		if errRead == io.EOF {
+			// an incomplete line is a record being written: keep the bytes already read,
+			// the end of the line will be read by a next call
+			h.pendingLine += line
 			// result is: (no record, no record found, cannot continue, no error)
 			return 0, nil, false, false, nil
 		} else {
@@ -138,6 +142,9 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (types.MessageId, interface{
 			return 0, nil, true, false, errRead
 		}
 	}
+
+	line = h.pendingLine + line
+	h.pendingLine = ""
 
 	h.bytesRead += int64(len(line))
 	lastRecordIdRead := h.nextRecordIdRead
@@ -156,6 +163,14 @@ func (h *StreamIteratorHandlerFile) GetNextRecord() (types.MessageId, interface{
 		)
 		// result is: (no record, record found, may continue, error)
 		return lastRecordIdRead, nil, true, true, errUnmarshal
+	}
+
+	// the id of the record is stored in the record itself ({"i": id, "d": date, "m": message})
+	if record, isObject := message.(map[string]interface{}); isObject {
+		if id, isNumber := record["i"].(float64); isNumber && id >= 0 {
+			lastRecordIdRead = types.MessageId(id)
+			h.nextRecordIdRead = lastRecordIdRead + 1
+		}
 	}
 
 	// result is: (valid record, record found, may continue, no error)

@@ -271,6 +271,15 @@ func (idx *StreamIndexFile) getOffsetMessage(seekOffset int64, seekWhence int) (
 		_ = idx.file.Close()
 	}()
 
+	var indexRowsCount int64
+	if indexRowsCount, err = idx.getIndexRowsCount(); err != nil {
+		return nil, err
+	}
+	if indexRowsCount == 0 {
+		// the index is empty (empty stream): the position is the beginning of the stream
+		return &streamIndexRowMsg{}, nil
+	}
+
 	if _, err = idx.file.Seek(seekOffset, seekWhence); err != nil {
 		idx.logger.Error(
 			"Error while GetOffsetLastMessage seek",
@@ -325,7 +334,8 @@ func (idx *StreamIndexFile) getOffsetAt(messageId *types.MessageId, timestamp *t
 	}
 	if indexRowsCount == 0 {
 		// index is empty, therefore message id cannot be found
-		return nil, nil
+		// (note: callers dereference the row, it must not be nil without an error)
+		return nil, errors.New("message id not found")
 	}
 	lastIndexRank := indexRowsCount - 1
 
@@ -455,6 +465,42 @@ func (idx *StreamIndexFile) getIndexRowsCount() (int64, error) {
 	}
 
 	return info.Size() / sizeOfStreamIndexRowMsg, nil
+}
+
+// isIndexConsistent checks that the index matches the data file: the size of the index
+// must be a multiple of the size of a row, and its last row must end at the end of the
+// data file (the index written by previous versions of the stream writer does not match).
+func isIndexConsistent(dataFilePath string, indexFilePath string) (bool, error) {
+	dataInfo, err := os.Stat(dataFilePath)
+	if err != nil {
+		return false, err
+	}
+	indexInfo, err := os.Stat(indexFilePath)
+	if err != nil {
+		return false, err
+	}
+	if indexInfo.Size()%sizeOfStreamIndexRowMsg != 0 {
+		return false, nil
+	}
+	if indexInfo.Size() == 0 {
+		return dataInfo.Size() == 0, nil
+	}
+
+	file, err := os.Open(indexFilePath)
+	if err != nil {
+		return false, err
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+	if _, err = file.Seek(-sizeOfStreamIndexRowMsg, io.SeekEnd); err != nil {
+		return false, err
+	}
+	row := streamIndexRowMsg{}
+	if err = binary.Read(file, binary.LittleEndian, &row); err != nil {
+		return false, err
+	}
+	return row.Offset+row.LengthInBytes == dataInfo.Size(), nil
 }
 
 func (idx *StreamIndexFile) Log() {

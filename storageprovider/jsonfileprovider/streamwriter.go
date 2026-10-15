@@ -28,6 +28,7 @@ type StreamWriterFile struct {
 	fileMetaInfoPath string
 	fileData         *os.File
 	fileIndex        *os.File
+	dataOffset       int64 // size of the data file (offset of the next record)
 	mu               sync.Mutex
 	state            int
 }
@@ -60,6 +61,32 @@ func (w *StreamWriterFile) Init() error {
 		defer func() {
 			_ = fileIndex.Close()
 		}()
+	}
+
+	// Rebuild the index when it does not match the data file
+	// (ex: index written by a previous version of the stream writer which wrote rows
+	// in a format not readable by the index, or crash while writing)
+	if consistent, errCheck := isIndexConsistent(w.fileDataPath, w.fileIndexPath); errCheck != nil {
+		return errCheck
+	} else if !consistent {
+		w.logger.Warn(
+			"Stream index is not consistent with the data file, rebuilding it",
+			zap.String("topic", "stream"),
+			zap.String("method", "Init"),
+			zap.String("stream.uuid", w.info.UUID.String()),
+			zap.String("filename", w.fileIndexPath),
+		)
+		idx := NewStreamIndex(w.info.UUID, w.fileIndexPath, w.logger)
+		if _, errBuild := idx.BuildIndex(w.fileDataPath); errBuild != nil {
+			// the stream can still be written and read sequentially
+			w.logger.Error(
+				"Cannot rebuild stream index",
+				zap.String("topic", "stream"),
+				zap.String("method", "Init"),
+				zap.String("stream.uuid", w.info.UUID.String()),
+				zap.Error(errBuild),
+			)
+		}
 	}
 
 	// If stream meta file does not exists then create it for the first time
@@ -110,6 +137,13 @@ func (w *StreamWriterFile) Open() error {
 		)
 		return err
 	}
+
+	// the offset of the next record is the size of the data file
+	dataInfo, err := w.fileData.Stat()
+	if err != nil {
+		return err
+	}
+	w.dataOffset = dataInfo.Size()
 
 	w.state = STREAM_WRITER_FILE_STATE_OPENED
 	return nil
@@ -227,9 +261,15 @@ func (w *StreamWriterFile) Write(records *[]types.DeferedStreamRecord) error {
 		w.info.ReadableMessages.LastMsgId = record.Id
 
 		// update the index file
-		// row format is: (<msg id>, <msg length in bytes>, <date>)
-		var data = streamRowIndex{record.Id, int32(countBytesWritten), record.CreationDate.Unix()}
-		if err := binary.Write(w.fileIndex, binary.LittleEndian, data); err != nil {
+		// (the rows must have the format read by StreamIndexFile: id, length, offset, timestamp)
+		row := streamIndexRowMsg{
+			Id:                record.Id,
+			LengthInBytes:     int64(countBytesWritten),
+			Offset:            w.dataOffset,
+			TimestampUnixNano: record.CreationDate.UnixNano(),
+		}
+		w.dataOffset += int64(countBytesWritten)
+		if err := binary.Write(w.fileIndex, binary.LittleEndian, row); err != nil {
 			return err
 		}
 	}
@@ -248,7 +288,9 @@ func (w *StreamWriterFile) SaveFileMetaInfo() error {
 		)
 	}
 
-	file, err := os.OpenFile(w.fileMetaInfoPath, os.O_CREATE|os.O_WRONLY, 0644)
+	// note: the file must be truncated, otherwise a shorter content leaves trailing garbage
+	// (the file cannot be decoded anymore and the stream cannot be loaded at startup)
+	file, err := os.OpenFile(w.fileMetaInfoPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		w.logger.Error(
 			"can't open meta info file",

@@ -27,12 +27,6 @@ type streamListSerializeStruct struct {
 	StreamsUUID types.StreamUUIDList `json:"streams"`
 }
 
-type streamRowIndex struct {
-	msgId      types.MessageId
-	bytesCount int32
-	dateTime   int64
-}
-
 func (s *FileStorage) Init() error {
 	var err error
 
