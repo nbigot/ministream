@@ -25,6 +25,7 @@ type Stream struct {
 	logger       *zap.Logger
 	logVerbosity int
 	iterators    StreamIteratorMap
+	muIterators  sync.RWMutex // protects iterators (used by concurrent http requests)
 	ingestBuffer *buffering.StreamIngestBuffer
 	muIncMsgId   sync.Mutex
 	done         chan struct{}
@@ -88,7 +89,9 @@ func (s *Stream) AddIterator(it *StreamIterator) error {
 	}
 
 	itUUID := it.GetUUID()
+	s.muIterators.Lock()
 	s.iterators[itUUID] = it
+	s.muIterators.Unlock()
 	s.logger.Info(
 		"Add stream iterator",
 		zap.String("topic", "stream"),
@@ -107,21 +110,29 @@ func (s *Stream) CloseIterators() error {
 		zap.String("stream.uuid", s.info.UUID.String()),
 	)
 
-	for _, it := range s.iterators {
-		if err := it.Close(); err != nil {
-			return err
+	// empty all iterators
+	s.muIterators.Lock()
+	iterators := s.iterators
+	s.iterators = make(StreamIteratorMap)
+	s.muIterators.Unlock()
+
+	var err error
+	for _, it := range iterators {
+		if errClose := it.Close(); errClose != nil && err == nil {
+			err = errClose
 		}
 	}
-
-	// empty all iterators
-	s.iterators = make(StreamIteratorMap)
-	return nil
+	return err
 }
 
 func (s *Stream) CloseIterator(iterUUID types.StreamIteratorUUID) error {
-	var it *StreamIterator
-	var found bool
-	if it, found = s.iterators[iterUUID]; !found {
+	s.muIterators.Lock()
+	it, found := s.iterators[iterUUID]
+	if found {
+		delete(s.iterators, iterUUID)
+	}
+	s.muIterators.Unlock()
+	if !found {
 		// maybe the iterator has timed out or has been already be deleted
 		return errors.New("iterator not found")
 	}
@@ -135,18 +146,14 @@ func (s *Stream) CloseIterator(iterUUID types.StreamIteratorUUID) error {
 	)
 
 	// close the iterator
-	if err := it.Close(); err != nil {
-		return err
-	}
-
-	// clean
-	delete(s.iterators, iterUUID)
-	it = nil
-	return nil
+	return it.Close()
 }
 
 func (s *Stream) GetIterator(iterUUID types.StreamIteratorUUID) (*StreamIterator, error) {
-	if it, found := s.iterators[iterUUID]; !found {
+	s.muIterators.RLock()
+	it, found := s.iterators[iterUUID]
+	s.muIterators.RUnlock()
+	if !found {
 		return nil, fmt.Errorf("iterator not found: %s", iterUUID.String())
 	} else {
 		return it, nil
@@ -158,12 +165,14 @@ func (s *Stream) GetRecords(c *fasthttp.RequestCtx, iterUUID types.StreamIterato
 		return nil, errors.New("stream state is not running")
 	}
 
-	if it, found := s.iterators[iterUUID]; !found {
+	s.muIterators.RLock()
+	it, found := s.iterators[iterUUID]
+	s.muIterators.RUnlock()
+	if !found {
 		// maybe the iterator has timed out and be deleted
 		return nil, errors.New("iterator not found")
-	} else {
-		return it.GetRecords(c, maxRecords)
 	}
+	return it.GetRecords(c, maxRecords)
 }
 
 func (s *Stream) PutMessage(c *fasthttp.RequestCtx, message map[string]interface{}) (types.MessageId, error) {
@@ -269,6 +278,8 @@ func (s *Stream) Run() {
 				timer.Stop()
 				timer = nil
 			}
+			// the messages still waiting in the channel must be saved too
+			s.drainChannel()
 			if err = s.ingestBuffer.Save(); err != nil {
 				s.logger.Error(
 					"Can't save stream ingest buffer",
@@ -324,6 +335,19 @@ func (s *Stream) Run() {
 			}
 			flushC = nil
 			timer = nil
+		}
+	}
+}
+
+// drainChannel moves the messages waiting in the ingestion channel into the ingest buffer.
+func (s *Stream) drainChannel() {
+	channelMsg := s.ingestBuffer.GetChannelMsg()
+	for {
+		select {
+		case msg := <-channelMsg:
+			s.ingestBuffer.AppendMesssage(msg)
+		default:
+			return
 		}
 	}
 }
@@ -420,6 +444,8 @@ func (s *Stream) GetUUID() types.StreamUUID {
 }
 
 func (s *Stream) GetIteratorsCount() int {
+	s.muIterators.RLock()
+	defer s.muIterators.RUnlock()
 	return len(s.iterators)
 }
 

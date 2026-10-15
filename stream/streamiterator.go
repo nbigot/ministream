@@ -39,6 +39,7 @@ type StreamIterator struct {
 	Stats              StreamIteratorStats
 	handler            types.IStreamIteratorHandler
 	getRecordsBusyFlag atomic.Bool
+	closed             atomic.Bool
 	logger             *zap.Logger
 	// TODO: add timeout (self delete at timeout)
 }
@@ -62,9 +63,24 @@ func (it *StreamIterator) Open() error {
 }
 
 func (it *StreamIterator) Close() error {
-	it.request = nil
-	it.jqFilter = nil
-	return it.handler.Close()
+	it.closed.Store(true)
+	if it.getRecordsBusyFlag.CompareAndSwap(false, true) {
+		// no pending GetRecords request: close the handler now
+		// (the busy flag stays set, the iterator cannot be used anymore)
+		return it.handler.Close()
+	}
+	// a pending GetRecords request is using the handler,
+	// it will close the handler when it ends
+	return nil
+}
+
+// endGetRecords releases the iterator at the end of a GetRecords request,
+// and closes the handler if the iterator was closed during the request.
+func (it *StreamIterator) endGetRecords() {
+	it.getRecordsBusyFlag.Store(false)
+	if it.closed.Load() && it.getRecordsBusyFlag.CompareAndSwap(false, true) {
+		_ = it.handler.Close()
+	}
 }
 
 func (it *StreamIterator) Seek() error {
@@ -97,8 +113,8 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 	}()
 
 	// check mutex
-	if it.getRecordsBusyFlag.Load() {
-		// if the flag is already set, then the iterator is busy,
+	if !it.getRecordsBusyFlag.CompareAndSwap(false, true) {
+		// if the flag is already set, then the iterator is busy (or closed),
 		// therefore, return a busy status to tell the client to retry later
 
 		apiErr := apierror.APIError{
@@ -114,8 +130,7 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 		return &response, &apiErr
 	}
 
-	defer it.getRecordsBusyFlag.Store(false)
-	it.getRecordsBusyFlag.Store(true)
+	defer it.endGetRecords()
 
 	if err = it.Seek(); err != nil {
 		response.Status = "error"
@@ -128,11 +143,13 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 		record                interface{}
 		recordId              types.MessageId
 		lastRecordIdProcessed types.MessageId
+		recordProcessed       bool
 		foundRecord           bool
 		canContinue           bool
 	)
 
-	for {
+	// stop when the iterator is closed during the request (ex: during long polling)
+	for !it.closed.Load() {
 		recordId, record, foundRecord, canContinue, err = it.handler.GetNextRecord()
 
 		if !foundRecord {
@@ -158,6 +175,7 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 		}
 
 		lastRecordIdProcessed = recordId
+		recordProcessed = true
 
 		if err != nil {
 			response.CountErrors += 1
@@ -187,26 +205,24 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 
 			jqIter := it.jqFilter.RunWithContext(c, record)
 			v, ok := jqIter.Next()
-			if ok {
+			if !ok {
+				// does not match the jq filter therefore skip the message
+				response.CountSkipped += 1
+			} else if errJq, isAnError := v.(error); isAnError {
+				// gojq returns the runtime errors as values
+				it.logger.Error(
+					"jq error",
+					zap.String("topic", "stream"),
+					zap.String("method", "GetRecords"),
+					zap.String("stream.uuid", it.streamUUID.String()),
+					zap.String("jq", it.jqFilter.String()),
+					zap.Error(errJq),
+				)
+				response.CountErrors += 1
+			} else {
 				// the message is matching the jq filter
 				response.Count += 1
 				response.Records = append(response.Records, v)
-			} else {
-				if err, isAnError := v.(error); isAnError {
-					// invalid (TODO: decide to keep or to skip the message)
-					it.logger.Error(
-						"jq error",
-						zap.String("topic", "stream"),
-						zap.String("method", "GetRecords"),
-						zap.String("stream.uuid", it.streamUUID.String()),
-						zap.String("jq", it.jqFilter.String()),
-						zap.Error(err),
-					)
-					response.CountErrors += 1
-				} else {
-					// does not match the jq filter therefore skip the message
-					response.CountSkipped += 1
-				}
 			}
 		}
 
@@ -223,12 +239,15 @@ func (it *StreamIterator) GetRecords(c *fasthttp.RequestCtx, maxRecords uint) (*
 		return &response, err
 	}
 
-	it.LastRecordIdRead = lastRecordIdProcessed
+	if recordProcessed {
+		// keep the last record id read when no record was read during this request
+		it.LastRecordIdRead = lastRecordIdProcessed
+	}
 	it.Stats.RecordsErrors += response.CountErrors
 	it.Stats.RecordsSkipped += response.CountSkipped
 	it.Stats.RecordsSent += response.Count
 
-	response.LastRecordIdRead = lastRecordIdProcessed
+	response.LastRecordIdRead = it.LastRecordIdRead
 
 	if err = it.SaveSeek(); err != nil {
 		response.Status = "error"
