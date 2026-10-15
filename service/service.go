@@ -263,7 +263,7 @@ func (svc *Service) CreateRecordsIterator(streamPtr *stream.Stream, req *types.S
 	streamUUID := streamPtr.GetUUID()
 
 	// check limit the number of iterators for the stream
-	if svc.conf.Streams.MaxIteratorsPerStream > 0 && streamPtr.GetIteratorsCount() > svc.conf.Streams.MaxIteratorsPerStream {
+	if svc.conf.Streams.MaxIteratorsPerStream > 0 && streamPtr.GetIteratorsCount() >= svc.conf.Streams.MaxIteratorsPerStream {
 		return errorCreateRecordsIterator(streamUUID, constants.ErrorCantCreateRecordsIterator, errors.New("too many iterators opened for this stream"))
 	}
 
